@@ -70,6 +70,12 @@ namespace PersonaEditor.ViewModels
                 case FormatEnum.SPR:
                     DataContext = new SPREditorVM(sender.PersonaFile.GameData as SPR);
                     break;
+                case FormatEnum.SPR3:
+                    DataContext = new SPREditorVM(sender.PersonaFile.GameData as SPR3);
+                    break;
+                case FormatEnum.SPR6:
+                    DataContext = new SPREditorVM(sender.PersonaFile.GameData as SPR6);
+                    break;
                 case FormatEnum.SPD:
                     DataContext = new SPDEditorVM(sender.PersonaFile.GameData as SPD);
                     break;

@@ -55,6 +55,10 @@ namespace PersonaEditor.ViewModels
                     Tree.SetRoot(file);
                     Static.OpenedFile = Path.GetFullPath(path);
                 }
+                else
+                {
+                    MessageBox.Show("Can't open file format or file is invalid.", "Open error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

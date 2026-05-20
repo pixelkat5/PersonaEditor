@@ -51,7 +51,7 @@ namespace PersonaEditorLib.FileContainer
                     byte[] Data = reader.ReadBytes(Size);
                     reader.BaseStream.Position += IOTools.Alignment(reader.BaseStream.Position, 0x40);
 
-                    GameFile objectFile = GameFormatHelper.OpenFile(Name, Data, GameFormatHelper.GetFormat(Name));
+                    GameFile objectFile = GameFormatHelper.OpenFile(Name, Data);
                     if (objectFile == null)
                         objectFile = GameFormatHelper.OpenFile(Name, Data, FormatEnum.DAT);
                     SubFiles.Add(objectFile);
@@ -72,13 +72,13 @@ namespace PersonaEditorLib.FileContainer
                     int Size = reader.ReadInt32();
                     byte[] Data = reader.ReadBytes(Size);
 
-                    GameFile objectFile = GameFormatHelper.OpenFile(Name, Data, GameFormatHelper.GetFormat(Name));
+                    GameFile objectFile = GameFormatHelper.OpenFile(Name, Data);
                     if (objectFile == null)
                         objectFile = GameFormatHelper.OpenFile(Name, Data, FormatEnum.DAT);
                     SubFiles.Add(objectFile);
                 }
 
-                if (reader.BaseStream.Position != reader.BaseStream.Length)
+                if (reader.BaseStream.Position > reader.BaseStream.Length)
                     throw new System.Exception("BIN: read error");
             }
         }

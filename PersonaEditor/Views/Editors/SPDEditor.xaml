@@ -75,12 +75,18 @@
 
                     <Menu Grid.Column="0" VerticalAlignment="Center">
                         <MenuItem Header="Color">
-                            <MenuItem Header="Background" Click="MenuItem_Click" Tag="{Binding Source={x:Static settings:SPREditor.Default}, Path=BackgroundColor, Mode=TwoWay}" Command="{Binding}"/>
+                            <MenuItem Header="Texture Background..." Click="MenuItem_Click" Tag="{Binding Source={x:Static settings:SPREditor.Default}, Path=BackgroundColor, Mode=TwoWay}" Command="{Binding}"/>
+                            <MenuItem Header="Use PNG Background" Click="ResetBackground_Click"/>
+                            <Separator/>
                             <MenuItem Header="Border" Click="MenuItem_Click" Tag="{Binding Source={x:Static settings:SPREditor.Default}, Path=LineColor, Mode=TwoWay}"/>
                             <MenuItem Header="Selected Item" Click="MenuItem_Click" Tag="{Binding Source={x:Static settings:SPREditor.Default}, Path=SelectColor, Mode=TwoWay}"/>
                         </MenuItem>
                     </Menu>
                     <StatusBar Grid.Column="1">
+                        <TextBlock Text="Background" Margin="4,0,2,0"/>
+                        <Button Content="Color..." Padding="6,0" Margin="2,0" Click="PickBackground_Click"/>
+                        <Button Content="PNG" Padding="6,0" Margin="2,0,10,0" Click="ResetBackground_Click"/>
+                        <TextBlock Text="Border" Margin="4,0,2,0"/>
                         <controls:NumericIncDec x:Name="NUM" Min="0" Max="5" Width="40" Value="{Binding Source={x:Static settings:SPREditor.Default}, Path=BorderThickness, Mode=TwoWay}"/>
                     </StatusBar>
                 </Grid>
@@ -127,12 +133,29 @@
                         </DrawingBrush>
                     </Border.Background>
 
-                    <ItemsControl Grid.Column="2" ItemsSource="{Binding Path=KeyList}" MouseMove="ItemsControl_MouseMove">
+                    <ItemsControl Grid.Column="2" ItemsSource="{Binding Path=KeyList}"
+                                  MouseMove="ItemsControl_MouseMove"
+                                  MouseLeftButtonUp="ItemsControl_MouseLeftButtonUp"
+                                  LostMouseCapture="ItemsControl_LostMouseCapture">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <wpfcontrol:RelativePanel Rect="{Binding Path=Rect}" ClipToBounds="True">
                                     <wpfcontrol:RelativePanel.Background>
-                                        <ImageBrush ImageSource="{Binding Path=TextureImage}"/>
+                                        <DrawingBrush>
+                                            <DrawingBrush.Drawing>
+                                                <DrawingGroup>
+                                                    <GeometryDrawing>
+                                                        <GeometryDrawing.Brush>
+                                                            <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=BackgroundColor, Mode=OneWay}"/>
+                                                        </GeometryDrawing.Brush>
+                                                        <GeometryDrawing.Geometry>
+                                                            <RectangleGeometry Rect="{Binding Path=Rect}"/>
+                                                        </GeometryDrawing.Geometry>
+                                                    </GeometryDrawing>
+                                                    <ImageDrawing ImageSource="{Binding Path=TextureImage}" Rect="{Binding Path=Rect}"/>
+                                                </DrawingGroup>
+                                            </DrawingBrush.Drawing>
+                                        </DrawingBrush>
                                     </wpfcontrol:RelativePanel.Background>
                                 </wpfcontrol:RelativePanel>
                             </ItemsPanelTemplate>
@@ -148,7 +171,9 @@
 
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderThickness="{Binding ElementName=NUM, Path=Value}">
+                                <Border BorderThickness="{Binding ElementName=NUM, Path=Value}"
+                                        Cursor="SizeAll"
+                                        MouseLeftButtonDown="SpriteBox_MouseLeftButtonDown">
                                     <Border.BorderBrush>
                                         <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=LineColor, Mode=OneWay}"/>
                                     </Border.BorderBrush>
