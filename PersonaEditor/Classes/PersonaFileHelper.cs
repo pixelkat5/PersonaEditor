@@ -11,6 +11,8 @@ namespace PersonaEditor.Classes
             FormatEnum.PTP,
             FormatEnum.SPD,
             FormatEnum.SPR,
+            FormatEnum.SPR3,
+            FormatEnum.SPR6,
             FormatEnum.FTD,
             FormatEnum.DAT,
             FormatEnum.FNT,

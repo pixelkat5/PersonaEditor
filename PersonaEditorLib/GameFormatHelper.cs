@@ -19,6 +19,7 @@ namespace PersonaEditorLib
             { ".p01",  FormatEnum.BIN },
             { ".arc",  FormatEnum.BIN },
             { ".dds2", FormatEnum.BIN },
+            { ".gsd",  FormatEnum.BIN },
 
             { ".bf",  FormatEnum.BF  },
             { ".pm1", FormatEnum.PM1 },
@@ -31,12 +32,19 @@ namespace PersonaEditorLib
 
             //Graphic containers
             { ".spr", FormatEnum.SPR },
+            { ".spr3", FormatEnum.SPR3 },
+            { ".spr6", FormatEnum.SPR6 },
+            { ".g1t", FormatEnum.G1T },
+            { ".file", FormatEnum.G1T },
+            { ".tpc", FormatEnum.TPC },
             { ".spd", FormatEnum.SPD },
 
             //Graphic
             { ".fnt", FormatEnum.FNT },
             { ".tmx", FormatEnum.TMX },
             { ".dds", FormatEnum.DDS },
+            { ".ctpk", FormatEnum.CTPK },
+            { ".amt", FormatEnum.CTPK },
 
             //Text
             { ".bmd", FormatEnum.BMD },
@@ -61,6 +69,14 @@ namespace PersonaEditorLib
                     Obj = new FileContainer.BIN(data);
                 else if (type == FormatEnum.SPR)
                     Obj = new SpriteContainer.SPR(data);
+                else if (type == FormatEnum.SPR3)
+                    Obj = new SpriteContainer.SPR3(data);
+                else if (type == FormatEnum.SPR6)
+                    Obj = new SpriteContainer.SPR6(data);
+                else if (type == FormatEnum.G1T)
+                    Obj = new SpriteContainer.G1T(data);
+                else if (type == FormatEnum.TPC)
+                    Obj = new SpriteContainer.TPC(data);
                 else if (type == FormatEnum.TMX)
                     Obj = new Sprite.TMX(data);
                 else if (type == FormatEnum.BF)
@@ -97,6 +113,8 @@ namespace PersonaEditorLib
                     {
                         Obj = new Sprite.DDSAtlus(data);
                     }
+                else if (type == FormatEnum.CTPK)
+                    Obj = new Sprite.CTPK(data);
                 else if (type == FormatEnum.SPD)
                     Obj = new SpriteContainer.SPD(data);
                 else
@@ -141,12 +159,25 @@ namespace PersonaEditorLib
                     return FormatEnum.BMD;
                 else if (buffer.SequenceEqual(new byte[] { 0x54, 0x4D, 0x58, 0x30 }))
                     return FormatEnum.TMX;
+                else if (buffer.SequenceEqual(new byte[] { 0x53, 0x50, 0x52, 0x33 }))
+                    return FormatEnum.SPR3;
                 else if (buffer.SequenceEqual(new byte[] { 0x53, 0x50, 0x52, 0x30 }))
                     return FormatEnum.SPR;
                 else if (buffer.SequenceEqual(new byte[] { 0x46, 0x4C, 0x57, 0x30 }))
                     return FormatEnum.BF;
                 else if (buffer.SequenceEqual(new byte[] { 0x50, 0x4D, 0x44, 0x31 }))
                     return FormatEnum.PM1;
+            }
+
+            if (data.Length >= 4)
+            {
+                var buffer = data.SubArray(0, 4);
+                if (buffer.SequenceEqual(new byte[] { 0x43, 0x54, 0x50, 0x4B }))
+                    return FormatEnum.CTPK;
+                else if (buffer.SequenceEqual(new byte[] { 0x53, 0x50, 0x52, 0x36 }))
+                    return FormatEnum.SPR6;
+                else if (buffer.SequenceEqual(new byte[] { 0x47, 0x54, 0x31, 0x47 }))
+                    return FormatEnum.G1T;
             }
             return FormatEnum.Unknown;
         }

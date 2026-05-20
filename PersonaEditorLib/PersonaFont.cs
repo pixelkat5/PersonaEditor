@@ -24,7 +24,7 @@ namespace PersonaEditorLib
                 OpenCache(cache);
             else
             {
-                OpenFont(new FNT(fontPath));
+                OpenFont(fontPath);
                 CreateCache(cache);
             }
         }
@@ -72,7 +72,54 @@ namespace PersonaEditorLib
         private void OpenFont(string FontName)
         {
             using (FileStream FS = File.OpenRead(FontName))
-                OpenFont(new FNT(FS, 0));
+            {
+                byte[] magic = new byte[4];
+                if (FS.Read(magic, 0, magic.Length) != magic.Length)
+                    throw new InvalidDataException("FNT: invalid file header.");
+                FS.Position = 0;
+
+                if (magic[0] == (byte)'F' && magic[1] == (byte)'N' && magic[2] == (byte)'T' && magic[3] == (byte)'0')
+                {
+                    var data = new byte[FS.Length];
+                    FS.Read(data, 0, data.Length);
+                    ReadFNT0(new FNT0(data));
+                }
+                else
+                {
+                    OpenFont(new FNT(FS, 0));
+                }
+            }
+        }
+
+        private void ReadFNT0(FNT0 fnt0)
+        {
+            Height = fnt0.Height;
+            Width = fnt0.Width;
+            PixelFormat = PixelFormats.Indexed8;
+            Palette = ImageHelper.GetGrayPalette(8);
+
+            var DecList = fnt0.Compressed.GetDecompressedData();
+            int glyphsize = Width * Height;
+            for (int i = 0; i < DecList.Count; i++)
+            {
+                byte[] glyph = DecList[i];
+                byte[] glyphData = new byte[glyphsize];
+                int copyStart = 6;
+                int available = Math.Min(glyphsize, Math.Max(0, glyph.Length - copyStart));
+                if (available > 0)
+                    Buffer.BlockCopy(glyph, copyStart, glyphData, 0, available);
+
+                int index = i + 32;
+                if (DataList.ContainsKey(index))
+                    DataList[index] = glyphData;
+                else
+                    DataList.Add(index, glyphData);
+
+                if (CutList.ContainsKey(index))
+                    CutList[index] = new VerticalCut(0, (byte)Width);
+                else
+                    CutList.Add(index, new VerticalCut(0, (byte)Width));
+            }
         }
 
         private void OpenFont(FNT FNT)

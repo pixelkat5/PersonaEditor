@@ -28,7 +28,7 @@ namespace PersonaEditor.Classes.Managers
                     if (Path.GetExtension(file).ToLower() == ".fntmap")
                     {
                         var temp = Path.GetFileNameWithoutExtension(file);
-                        if (temp != "Empty")
+                        if (temp != "Empty" && !encodingList.Contains(temp))
                             encodingList.Add(temp);
                     }
             }
@@ -52,10 +52,18 @@ namespace PersonaEditor.Classes.Managers
                 return encodings[name];
             else
             {
-                var enc = new PersonaEncoding(Path.Combine(sourcedir, name + ".fntmap"));
+                var mapPath = Path.Combine(sourcedir, name + ".fntmap");
+                var enc = new PersonaEncoding(mapPath);
                 encodings.Add(name, enc);
                 return enc;
             }
+        }
+
+        public void Reload(string name)
+        {
+            if (encodings.ContainsKey(name))
+                encodings.Remove(name);
+            Notify(name);
         }
 
         public int GetPersonaEncodingIndex(string name)

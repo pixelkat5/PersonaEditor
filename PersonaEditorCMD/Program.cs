@@ -227,10 +227,11 @@ namespace PersonaEditorCMD
         {
             if (objectFile.GameData is PTP ptp)
             {
-                string path = value == "" ? Path.Combine(openedFileDir, Path.GetFileNameWithoutExtension(objectFile.Name) + ".TXT") : value;
-                var exp = ptp.ExportTXT(parameters.RemoveSplit, Static.OldEncoding()).Select(x => $"{objectFile.Name}\t{x}");
-
-                File.AppendAllLines(path, exp);
+                ExportPTPText(ptp, objectFile.Name, value, openedFileDir, parameters);
+            }
+            else if (objectFile.GameData is BMD bmd)
+            {
+                ExportPTPText(new PTP(bmd), objectFile.Name, value, openedFileDir, parameters);
             }
             else if (objectFile.GameData is StringList strlst)
             {
@@ -245,60 +246,18 @@ namespace PersonaEditorCMD
         {
             if (objectFile.GameData is PTP ptp)
             {
-                string path = value == "" ? Path.Combine(openedFileDir, Path.GetFileNameWithoutExtension(objectFile.Name) + ".TXT") : value;
+                ImportPTPText(ptp, objectFile.Name, value, openedFileDir, parameters);
+            }
+            else if (objectFile.GameData is BMD bmd)
+            {
+                PTP bmdText = new PTP(bmd);
+                bmdText.CopyOld2New(Static.OldEncoding());
 
-                if (File.Exists(path))
+                if (ImportPTPText(bmdText, objectFile.Name, value, openedFileDir, parameters))
                 {
-                    List<string[]> import = File.ReadAllLines(path, parameters.FileEncoding).Select(x => x.Split('\t')).ToList();
-                    LineMap MAP = new LineMap(parameters.Map);
-
-                    if (parameters.LineByLine)
-                    {
-                        if (MAP[LineMap.Type.NewText] >= 0)
-                        {
-                            string[] importedText = import
-                                .Select(x => x[MAP[LineMap.Type.NewText]])
-                                .ToArray();
-                            ptp.ImportTextLBL(importedText);
-                        }
-                    }
-                    else
-                    {
-                        if (MAP[LineMap.Type.FileName] >= 0
-                            & MAP[LineMap.Type.MSGindex] >= 0
-                            & MAP[LineMap.Type.StringIndex] >= 0
-                            & MAP[LineMap.Type.NewText] >= 0)
-                        {
-                            string[][] importedText = import
-                                .Where(x => x.Length >= MAP.MinLength)
-                                .Where(x => x[MAP[LineMap.Type.FileName]].Equals(objectFile.Name, StringComparison.CurrentCultureIgnoreCase))
-                                .Where(x => x[MAP[LineMap.Type.NewText]] != "")
-                                .Select(x => new string[]
-                                {
-                                    x[MAP[LineMap.Type.MSGindex]],
-                                    x[MAP[LineMap.Type.StringIndex]],
-                                    x[MAP[LineMap.Type.NewText]]
-                                })
-                                .ToArray();
-
-                            if (parameters.Width > 0)
-                            {
-                                var charWidth = Static.NewFont().GetCharWidth(Static.NewEncoding());
-                                ptp.ImportText(importedText, charWidth, parameters.Width);
-                            }
-                            else
-                                ptp.ImportText(importedText);
-                        }
-                    }
-
-                    if (MAP[LineMap.Type.OldName] >= 0 & MAP[LineMap.Type.NewName] >= 0)
-                    {
-                        Dictionary<string, string> importedText = import
-                                .Where(x => x.Length >= MAP.MinLength)
-                                .GroupBy(x => x[MAP[LineMap.Type.OldName]])
-                                .ToDictionary(x => x.Key, x => x.First()[MAP[LineMap.Type.NewName]]);
-                        ptp.ImportNames(importedText, Static.OldEncoding());
-                    }
+                    var temp = new BMD(bmdText, Static.NewEncoding());
+                    temp.IsLittleEndian = bmd.IsLittleEndian;
+                    objectFile.GameData = temp;
                 }
             }
             else if (objectFile.GameData is StringList strlst)
@@ -311,6 +270,75 @@ namespace PersonaEditorCMD
                     strlst.ImportText(importedtext);
                 }
             }
+        }
+
+        static void ExportPTPText(PTP ptp, string objectFileName, string value, string openedFileDir, Parameters parameters)
+        {
+            string path = value == "" ? Path.Combine(openedFileDir, Path.GetFileNameWithoutExtension(objectFileName) + ".TXT") : value;
+            var exp = ptp.ExportTXT(parameters.RemoveSplit, Static.OldEncoding()).Select(x => $"{objectFileName}\t{x}");
+
+            File.AppendAllLines(path, exp);
+        }
+
+        static bool ImportPTPText(PTP ptp, string objectFileName, string value, string openedFileDir, Parameters parameters)
+        {
+            string path = value == "" ? Path.Combine(openedFileDir, Path.GetFileNameWithoutExtension(objectFileName) + ".TXT") : value;
+
+            if (!File.Exists(path))
+                return false;
+
+            List<string[]> import = File.ReadAllLines(path, parameters.FileEncoding).Select(x => x.Split('\t')).ToList();
+            LineMap MAP = new LineMap(parameters.Map);
+
+            if (parameters.LineByLine)
+            {
+                if (MAP[LineMap.Type.NewText] >= 0)
+                {
+                    string[] importedText = import
+                        .Select(x => x[MAP[LineMap.Type.NewText]])
+                        .ToArray();
+                    ptp.ImportTextLBL(importedText);
+                }
+            }
+            else
+            {
+                if (MAP[LineMap.Type.FileName] >= 0
+                    & MAP[LineMap.Type.MSGindex] >= 0
+                    & MAP[LineMap.Type.StringIndex] >= 0
+                    & MAP[LineMap.Type.NewText] >= 0)
+                {
+                    string[][] importedText = import
+                        .Where(x => x.Length >= MAP.MinLength)
+                        .Where(x => x[MAP[LineMap.Type.FileName]].Equals(objectFileName, StringComparison.CurrentCultureIgnoreCase))
+                        .Where(x => x[MAP[LineMap.Type.NewText]] != "")
+                        .Select(x => new string[]
+                        {
+                            x[MAP[LineMap.Type.MSGindex]],
+                            x[MAP[LineMap.Type.StringIndex]],
+                            x[MAP[LineMap.Type.NewText]]
+                        })
+                        .ToArray();
+
+                    if (parameters.Width > 0)
+                    {
+                        var charWidth = Static.NewFont().GetCharWidth(Static.NewEncoding());
+                        ptp.ImportText(importedText, charWidth, parameters.Width);
+                    }
+                    else
+                        ptp.ImportText(importedText);
+                }
+            }
+
+            if (MAP[LineMap.Type.OldName] >= 0 & MAP[LineMap.Type.NewName] >= 0)
+            {
+                Dictionary<string, string> importedText = import
+                        .Where(x => x.Length >= MAP.MinLength)
+                        .GroupBy(x => x[MAP[LineMap.Type.OldName]])
+                        .ToDictionary(x => x.Key, x => x.First()[MAP[LineMap.Type.NewName]]);
+                ptp.ImportNames(importedText, Static.OldEncoding());
+            }
+
+            return true;
         }
 
         static void ExportByType(GameFile objectFile, string value, string openedFileDir, Parameters parameters)

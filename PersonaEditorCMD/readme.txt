@@ -22,9 +22,9 @@ Command: PersonaEditor.exe "FilePath" [-command] [/arguments] [-command] [/argum
 	-impptp		- Import PTP to opened file (if it's BMD) or to all subfile.
 		Support: All files.
 
-	-exptext	- Export text from PTP.
-	-imptext	- Import text to PTP.
-		Support: PTP
+	-exptext	- Export text from PTP or BMD/MSG.
+	-imptext	- Import text to PTP or BMD/MSG.
+		Support: PTP; BMD (BMD, MSG)
 
 	-expall		- Export all subfiles from opened file.
 	-impall		- Import all finding subfiles.

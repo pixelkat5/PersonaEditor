@@ -18,6 +18,11 @@
         FTD,
         DDS,
         SPD,
+        CTPK,
+        SPR3,
+        SPR6,
+        G1T,
+        TPC,
         StringList
     }
 }

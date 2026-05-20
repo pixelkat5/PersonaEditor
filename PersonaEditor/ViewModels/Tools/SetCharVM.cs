@@ -93,7 +93,6 @@ namespace PersonaEditor.ViewModels.Tools
                     GlyphList.Add(temp);
                 }
             var enc = Static.EncodingManager.GetPersonaEncoding(Static.FontManager.GetPersonaFontName(_FontSelect));
-
             foreach (var a in GlyphList)
                 if (enc.Dictionary.ContainsKey(a.Index))
                     a.Char = enc.Dictionary[a.Index].ToString();
@@ -109,24 +108,18 @@ namespace PersonaEditor.ViewModels.Tools
 
                 if (result == MessageBoxResult.Yes)
                 {
-                    var enc = Static.EncodingManager.GetPersonaEncoding(Static.FontManager.GetPersonaFontName(_FontSelect));
-                    if (enc.Tag == "Empty")
-                    {
-                        PersonaEncoding personaEncoding = new PersonaEncoding();
-                        foreach (var a in GlyphList)
-                            if (a.Char.Length > 0)
-                                personaEncoding.Add(a.Index, a.Char[0]);
+                    var fontName = Static.FontManager.GetPersonaFontName(_FontSelect);
+                    var sourceDir = Static.FontManager.sourcedir;
+                    var mapPath = Path.Combine(sourceDir, fontName + ".FNTMAP");
 
-                        personaEncoding.SaveFNTMAP(Path.Combine(Static.FontManager.sourcedir, Static.FontManager.GetPersonaFontName(_FontSelect) + ".FNTMAP"));
-                    }
-                    else
-                    {
-                        foreach (var a in GlyphList)
-                            if (a.Char.Length > 0)
-                                enc.Add(a.Index, a.Char[0]);
-                        enc.SaveFNTMAP(enc.FilePath);
-                        Static.EncodingManager.Update(Static.FontManager.GetPersonaFontName(_FontSelect));
-                    }
+                    PersonaEncoding personaEncoding = new PersonaEncoding();
+                    foreach (var a in GlyphList)
+                        if (a.Char.Length > 0)
+                            personaEncoding.Add(a.Index, a.Char[0]);
+
+                    personaEncoding.SaveFNTMAP(mapPath);
+
+                    Static.EncodingManager.Reload(fontName);
                 }
                 else if (result == MessageBoxResult.Cancel)
                     return false;
