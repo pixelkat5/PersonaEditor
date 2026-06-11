@@ -10,7 +10,7 @@ using System.Windows.Media;
 
 namespace PersonaEditor.Controls
 {
-    class ZoomPresenter : Decorator, IScrollInfo, IScrollInfo2
+    public class ZoomPresenter : Decorator, IScrollInfo, IScrollInfo2
     {
         internal const double _scrollLineDelta = 16.0;
         internal const double _mouseWheelDelta = 48.0;
@@ -241,7 +241,7 @@ namespace PersonaEditor.Controls
                 return new Size();
             }
 
-            Child.Measure(availableSize);
+            Child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
             Extent = Child.DesiredSize;
             Viewport = availableSize;

@@ -23,6 +23,9 @@
         SPR6,
         G1T,
         TPC,
+        HIP,
+        PAC,
+        ATF,
         StringList
     }
 }

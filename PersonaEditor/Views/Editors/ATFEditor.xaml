@@ -1,0 +1,22 @@
+<UserControl x:Class="PersonaEditor.Views.Editors.ATFEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <DataGrid ItemsSource="{Binding Entries}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserReorderColumns="False"
+                  CanUserSortColumns="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="#" Binding="{Binding Index}" IsReadOnly="True" Width="60" />
+                <DataGridTextColumn Header="Original" Binding="{Binding OldText}" IsReadOnly="True" Width="*" />
+                <DataGridTextColumn Header="Edited" Width="*">
+                    <DataGridTextColumn.Binding>
+                        <Binding Path="NewText" UpdateSourceTrigger="PropertyChanged" />
+                    </DataGridTextColumn.Binding>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

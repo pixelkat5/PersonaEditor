@@ -22,6 +22,45 @@ bld/
 [Bb]in/
 [Oo]bj/
 
+# Modern .NET build/publish artifacts
+artifacts/
+TestResults/
+**/[Bb]in/
+**/[Oo]bj/
+**/[Pp]ublish/
+**/Debug*/
+**/Release*/
+**/x86/
+**/x64/
+
+# Compiled binaries and symbols
+*.app
+*.appx
+*.appxbundle
+*.dll
+*.dylib
+*.exe
+*.lib
+*.msi
+*.msix
+*.msixbundle
+*.pdb
+*.so
+*.wasm
+*.winmd
+
+# Generated dependency/build metadata
+*.deps.json
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
+*.staticwebassets.*
+*.AssemblyInfo.cs
+*.AssemblyInfoInputs.cache
+*.GeneratedMSBuildEditorConfig.editorconfig
+*.GlobalUsings.g.cs
+project.assets.json
+project.nuget.cache
+
 # Visual Studio 2015 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
@@ -243,3 +282,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+
+# Local sample/test payloads
+P5_FIELD_DAY.SPD

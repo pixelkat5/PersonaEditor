@@ -4,6 +4,9 @@
 
 ## Supported File Types
 
-* Container: BIN (BIN, PAK, PAC, P00, ARC, GSD); PM1; BF; BVP; TBL; FTD (FTD, CTD, TTD)
-* Graphic: FNT; SPR; TMX; SPD; DDS; SPR3; SPR6; CTPK; G1T;
-* Text: BMD (BMD, MSG); PTP
+* Containers: BIN (`.bin`, `.abin`, `.pak`, `.p00`, `.p01`, `.arc`, `.dds2`, `.gsd`); FPAC (`.pac`, `.paccs`, `.pacgz`, `.fontpac`); PM1; BF; BVP; TBL; FTD (`.ftd`, `.ctd`, `.ttd`)
+* Graphic containers: SPR; SPR3; SPR6; SPD; G1T (`.g1t`, `.file`); TPC
+* Graphics and fonts: FNT; FNT0; TMX; DDS; CTPK (`.ctpk`, `.amt`); HIP
+* Text: BMD (`.bmd`, `.msg`); PTP; ATF
+
+Unknown files are preserved as raw DAT entries. Non-FPAC `.pac` variants, such as TXAC archives, currently fall back to DAT.

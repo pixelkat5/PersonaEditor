@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+
+  <Target Name="RemovePdbFilesFromOutput" AfterTargets="Build">
+    <ItemGroup>
+      <PdbFilesInOutput Include="$(TargetDir)**\*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(PdbFilesInOutput)" TreatErrorsAsWarnings="true" />
+  </Target>
+</Project>

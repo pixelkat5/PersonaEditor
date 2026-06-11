@@ -14,7 +14,10 @@ namespace PersonaEditorLib
             { ".bin", FormatEnum.BIN },
             { ".abin", FormatEnum.BIN },
             { ".pak",  FormatEnum.BIN },
-            { ".pac",  FormatEnum.BIN },
+            { ".pac",  FormatEnum.PAC },
+            { ".paccs", FormatEnum.PAC },
+            { ".pacgz", FormatEnum.PAC },
+            { ".fontpac", FormatEnum.PAC },
             { ".p00",  FormatEnum.BIN },
             { ".p01",  FormatEnum.BIN },
             { ".arc",  FormatEnum.BIN },
@@ -45,8 +48,10 @@ namespace PersonaEditorLib
             { ".dds", FormatEnum.DDS },
             { ".ctpk", FormatEnum.CTPK },
             { ".amt", FormatEnum.CTPK },
+            { ".hip", FormatEnum.HIP },
 
             //Text
+            { ".atf", FormatEnum.ATF },
             { ".bmd", FormatEnum.BMD },
             { ".msg", FormatEnum.BMD },
             { ".ptp", FormatEnum.PTP }
@@ -67,6 +72,15 @@ namespace PersonaEditorLib
 
                 if (type == FormatEnum.BIN)
                     Obj = new FileContainer.BIN(data);
+                else if (type == FormatEnum.PAC)
+                    try
+                    {
+                        Obj = new FileContainer.PAC(data);
+                    }
+                    catch
+                    {
+                        Obj = new DAT(data);
+                    }
                 else if (type == FormatEnum.SPR)
                     Obj = new SpriteContainer.SPR(data);
                 else if (type == FormatEnum.SPR3)
@@ -85,6 +99,8 @@ namespace PersonaEditorLib
                     Obj = new FileContainer.PM1(data);
                 else if (type == FormatEnum.BMD)
                     Obj = new Text.BMD(data);
+                else if (type == FormatEnum.ATF)
+                    Obj = new Text.ATF(data);
                 else if (type == FormatEnum.PTP)
                     Obj = new Text.PTP(data);
                 else if (type == FormatEnum.FNT)
@@ -115,6 +131,8 @@ namespace PersonaEditorLib
                     }
                 else if (type == FormatEnum.CTPK)
                     Obj = new Sprite.CTPK(data);
+                else if (type == FormatEnum.HIP)
+                    Obj = new Sprite.HIP(data);
                 else if (type == FormatEnum.SPD)
                     Obj = new SpriteContainer.SPD(data);
                 else
@@ -153,6 +171,8 @@ namespace PersonaEditorLib
                 byte[] buffer = data.SubArray(0, 4);
                 if (buffer.SequenceEqual(new byte[] { 0x46, 0x4E, 0x54, 0x30 }))
                     return FormatEnum.FNT0;
+                else if (buffer.SequenceEqual(new byte[] { 0x41, 0x54, 0x46, 0x00 }))
+                    return FormatEnum.ATF;
 
                 buffer = data.SubArray(8, 4);
                 if (buffer.SequenceEqual(new byte[] { 0x31, 0x47, 0x53, 0x4D }) | buffer.SequenceEqual(new byte[] { 0x4D, 0x53, 0x47, 0x31 }))
@@ -172,12 +192,16 @@ namespace PersonaEditorLib
             if (data.Length >= 4)
             {
                 var buffer = data.SubArray(0, 4);
-                if (buffer.SequenceEqual(new byte[] { 0x43, 0x54, 0x50, 0x4B }))
+                if (buffer.SequenceEqual(new byte[] { 0x46, 0x50, 0x41, 0x43 }))
+                    return FormatEnum.PAC;
+                else if (buffer.SequenceEqual(new byte[] { 0x43, 0x54, 0x50, 0x4B }))
                     return FormatEnum.CTPK;
                 else if (buffer.SequenceEqual(new byte[] { 0x53, 0x50, 0x52, 0x36 }))
                     return FormatEnum.SPR6;
                 else if (buffer.SequenceEqual(new byte[] { 0x47, 0x54, 0x31, 0x47 }))
                     return FormatEnum.G1T;
+                else if (buffer.SequenceEqual(new byte[] { 0x48, 0x49, 0x50, 0x00 }))
+                    return FormatEnum.HIP;
             }
             return FormatEnum.Unknown;
         }

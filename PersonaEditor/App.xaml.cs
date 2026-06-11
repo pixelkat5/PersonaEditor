@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Xml.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using PersonaEditor.Views;
 using PersonaEditor.Classes;
 using PersonaEditorLib.Text;
@@ -24,6 +25,7 @@ namespace PersonaEditor
 
         public App()
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             //Test();
             InitializeComponent();
             LoadLocalization();

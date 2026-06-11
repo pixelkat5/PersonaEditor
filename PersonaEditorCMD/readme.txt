@@ -2,7 +2,7 @@
 	Container: BIN (BIN, PAK, PAC, P00, ARC); PM1; BF; BVP; TBL
 	Graphic: SPR; TMX
 	Font: FNT
-	Text: BMD (BMD, MSG); PTP
+	Text: BMD (BMD, MSG); PTP; ATF
 
 For select OLD/NEW font: open PersonaEditor.xml and input your font name (without extention).
 
@@ -22,9 +22,9 @@ Command: PersonaEditor.exe "FilePath" [-command] [/arguments] [-command] [/argum
 	-impptp		- Import PTP to opened file (if it's BMD) or to all subfile.
 		Support: All files.
 
-	-exptext	- Export text from PTP or BMD/MSG.
-	-imptext	- Import text to PTP or BMD/MSG.
-		Support: PTP; BMD (BMD, MSG)
+	-exptext	- Export text from PTP, BMD/MSG, or ATF.
+	-imptext	- Import text to PTP, BMD/MSG, or ATF.
+		Support: PTP; BMD (BMD, MSG); ATF
 
 	-expall		- Export all subfiles from opened file.
 	-impall		- Import all finding subfiles.

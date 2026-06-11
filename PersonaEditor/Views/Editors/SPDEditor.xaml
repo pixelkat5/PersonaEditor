@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:settings="clr-namespace:PersonaEditor.ApplicationSettings"
              xmlns:controls="clr-namespace:PersonaEditor.Controls.Primitive"
+             xmlns:pecontrols="clr-namespace:PersonaEditor.Controls"
              xmlns:wpfcontrol="clr-namespace:AuxiliaryLibraries.WPF.Controls;assembly=AuxiliaryLibraries.WPF"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="500">
@@ -91,112 +92,123 @@
                     </StatusBar>
                 </Grid>
 
-                <Border DataContext="{Binding Path=TextureList/}" Grid.Row="1" BorderBrush="Black" BorderThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border.Background>
-                        <DrawingBrush Viewport="0,0,50,50" ViewportUnits="Absolute" TileMode="Tile">
-                            <DrawingBrush.Drawing>
-                                <DrawingGroup>
-                                    <GeometryDrawing Brush="White">
-                                        <GeometryDrawing.Geometry>
-                                            <RectangleGeometry Rect="0,0,15,15"/>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
+                <ScrollViewer x:Name="SpriteViewer" Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                              PreviewMouseWheel="SpriteViewer_PreviewMouseWheel"
+                              PreviewMouseDown="SpriteViewer_PreviewMouseDown"
+                              PreviewMouseMove="SpriteViewer_PreviewMouseMove"
+                              PreviewMouseUp="SpriteViewer_PreviewMouseUp"
+                              LostMouseCapture="SpriteViewer_LostMouseCapture">
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid.LayoutTransform>
+                            <ScaleTransform x:Name="SpriteViewerScale" ScaleX="1" ScaleY="1"/>
+                        </Grid.LayoutTransform>
+                        <Border DataContext="{Binding Path=TextureList/}" BorderBrush="Black" BorderThickness="2"
+                                Width="{Binding Path=Rect.Width}" Height="{Binding Path=Rect.Height}">
+                            <Border.Background>
+                                <DrawingBrush Viewport="0,0,50,50" ViewportUnits="Absolute" TileMode="Tile">
+                                    <DrawingBrush.Drawing>
+                                        <DrawingGroup>
+                                            <GeometryDrawing Brush="White">
+                                                <GeometryDrawing.Geometry>
+                                                    <RectangleGeometry Rect="0,0,15,15"/>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                            <GeometryDrawing Brush="LightGray">
+                                                <GeometryDrawing.Geometry>
+                                                    <RectangleGeometry Rect="0,15,15,15"/>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                            <GeometryDrawing Brush="LightGray">
+                                                <GeometryDrawing.Geometry>
+                                                    <RectangleGeometry Rect="15,0,15,15"/>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                            <GeometryDrawing Brush="White">
+                                                <GeometryDrawing.Geometry>
+                                                    <RectangleGeometry Rect="15,15,15,15"/>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                            <GeometryDrawing>
+                                                <GeometryDrawing.Brush>
+                                                    <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=BackgroundColor, Mode=OneWay}"/>
+                                                </GeometryDrawing.Brush>
+                                                <GeometryDrawing.Geometry>
+                                                    <RectangleGeometry Rect="0,0,30,30"/>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                        </DrawingGroup>
+                                    </DrawingBrush.Drawing>
+                                </DrawingBrush>
+                            </Border.Background>
 
-                                    <GeometryDrawing Brush="LightGray">
-                                        <GeometryDrawing.Geometry>
-                                            <RectangleGeometry Rect="0,15,15,15"/>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
+                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Path=KeyList}"
+                                          MouseMove="ItemsControl_MouseMove"
+                                          MouseLeftButtonUp="ItemsControl_MouseLeftButtonUp"
+                                          LostMouseCapture="ItemsControl_LostMouseCapture">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <wpfcontrol:RelativePanel Rect="{Binding Path=Rect}" ClipToBounds="True">
+                                            <wpfcontrol:RelativePanel.Background>
+                                                <DrawingBrush>
+                                                    <DrawingBrush.Drawing>
+                                                        <DrawingGroup>
+                                                            <GeometryDrawing>
+                                                                <GeometryDrawing.Brush>
+                                                                    <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=BackgroundColor, Mode=OneWay}"/>
+                                                                </GeometryDrawing.Brush>
+                                                                <GeometryDrawing.Geometry>
+                                                                    <RectangleGeometry Rect="{Binding Path=Rect}"/>
+                                                                </GeometryDrawing.Geometry>
+                                                            </GeometryDrawing>
+                                                            <ImageDrawing ImageSource="{Binding Path=TextureImage}" Rect="{Binding Path=Rect}"/>
+                                                        </DrawingGroup>
+                                                    </DrawingBrush.Drawing>
+                                                </DrawingBrush>
+                                            </wpfcontrol:RelativePanel.Background>
+                                        </wpfcontrol:RelativePanel>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
 
-                                    <GeometryDrawing Brush="LightGray">
-                                        <GeometryDrawing.Geometry>
-                                            <RectangleGeometry Rect="15,0,15,15"/>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="wpfcontrol:RelativePanel.ItemRect" Value="{Binding Path=Rect}"/>
+                                        <Setter Property="VerticalAlignment" Value="Stretch" />
+                                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
 
-                                    <GeometryDrawing Brush="White">
-                                        <GeometryDrawing.Geometry>
-                                            <RectangleGeometry Rect="15,15,15,15"/>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
-
-                                    <GeometryDrawing>
-                                        <GeometryDrawing.Brush>
-                                            <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=BackgroundColor, Mode=OneWay}"/>
-                                        </GeometryDrawing.Brush>
-                                        <GeometryDrawing.Geometry>
-                                            <RectangleGeometry Rect="0,0,30,30"/>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
-                                </DrawingGroup>
-                            </DrawingBrush.Drawing>
-                        </DrawingBrush>
-                    </Border.Background>
-
-                    <ItemsControl Grid.Column="2" ItemsSource="{Binding Path=KeyList}"
-                                  MouseMove="ItemsControl_MouseMove"
-                                  MouseLeftButtonUp="ItemsControl_MouseLeftButtonUp"
-                                  LostMouseCapture="ItemsControl_LostMouseCapture">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <wpfcontrol:RelativePanel Rect="{Binding Path=Rect}" ClipToBounds="True">
-                                    <wpfcontrol:RelativePanel.Background>
-                                        <DrawingBrush>
-                                            <DrawingBrush.Drawing>
-                                                <DrawingGroup>
-                                                    <GeometryDrawing>
-                                                        <GeometryDrawing.Brush>
-                                                            <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=BackgroundColor, Mode=OneWay}"/>
-                                                        </GeometryDrawing.Brush>
-                                                        <GeometryDrawing.Geometry>
-                                                            <RectangleGeometry Rect="{Binding Path=Rect}"/>
-                                                        </GeometryDrawing.Geometry>
-                                                    </GeometryDrawing>
-                                                    <ImageDrawing ImageSource="{Binding Path=TextureImage}" Rect="{Binding Path=Rect}"/>
-                                                </DrawingGroup>
-                                            </DrawingBrush.Drawing>
-                                        </DrawingBrush>
-                                    </wpfcontrol:RelativePanel.Background>
-                                </wpfcontrol:RelativePanel>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="wpfcontrol:RelativePanel.ItemRect" Value="{Binding Path=Rect}"/>
-                                <Setter Property="VerticalAlignment" Value="Stretch" />
-                                <Setter Property="HorizontalAlignment" Value="Stretch" />
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
-
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderThickness="{Binding ElementName=NUM, Path=Value}"
-                                        Cursor="SizeAll"
-                                        MouseLeftButtonDown="SpriteBox_MouseLeftButtonDown">
-                                    <Border.BorderBrush>
-                                        <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=LineColor, Mode=OneWay}"/>
-                                    </Border.BorderBrush>
-                                    <Rectangle Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0.4">
-                                        <Rectangle.Style>
-                                            <Style TargetType="Rectangle">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Path=IsSelected}" Value="True">
-                                                        <Setter Property="Fill">
-                                                            <Setter.Value>
-                                                                <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=SelectColor, Mode=OneWay}"/>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Rectangle.Style>
-                                    </Rectangle>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderThickness="{Binding ElementName=NUM, Path=Value}"
+                                                Cursor="SizeAll"
+                                                MouseMove="SpriteBox_MouseMove"
+                                                MouseLeave="SpriteBox_MouseLeave"
+                                                MouseLeftButtonDown="SpriteBox_MouseLeftButtonDown">
+                                            <Border.BorderBrush>
+                                                <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=LineColor, Mode=OneWay}"/>
+                                            </Border.BorderBrush>
+                                            <Rectangle Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0.4">
+                                                <Rectangle.Style>
+                                                    <Style TargetType="Rectangle">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Path=IsSelected}" Value="True">
+                                                                <Setter Property="Fill">
+                                                                    <Setter.Value>
+                                                                        <SolidColorBrush Color="{Binding Source={x:Static settings:SPREditor.Default}, Path=SelectColor, Mode=OneWay}"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Rectangle.Style>
+                                            </Rectangle>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </Grid>

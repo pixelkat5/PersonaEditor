@@ -154,6 +154,11 @@
                                         <editors:PTPEditor/>
                                     </Border>
                                 </DataTemplate>
+                                <DataTemplate DataType="{x:Type editorsVM:ATFEditorVM}">
+                                    <Border BorderBrush="Black" BorderThickness="1">
+                                        <editors:ATFEditor/>
+                                    </Border>
+                                </DataTemplate>
                                 <DataTemplate DataType="{x:Type editorsVM:HEXEditorVM}">
                                     <Border BorderBrush="Black" BorderThickness="1">
                                         <editors:HEXEditor/>

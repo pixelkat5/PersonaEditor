@@ -14,6 +14,11 @@ namespace PersonaEditorCMD
 {
     class Program
     {
+        static Program()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        }
+
         static void LoadSetting()
         {
             string setting = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location), "PersonaEditor.xml");
@@ -229,6 +234,10 @@ namespace PersonaEditorCMD
             {
                 ExportPTPText(ptp, objectFile.Name, value, openedFileDir, parameters);
             }
+            else if (objectFile.GameData is ATF atf)
+            {
+                ExportATFText(atf, objectFile.Name, value, openedFileDir, parameters);
+            }
             else if (objectFile.GameData is BMD bmd)
             {
                 ExportPTPText(new PTP(bmd), objectFile.Name, value, openedFileDir, parameters);
@@ -247,6 +256,10 @@ namespace PersonaEditorCMD
             if (objectFile.GameData is PTP ptp)
             {
                 ImportPTPText(ptp, objectFile.Name, value, openedFileDir, parameters);
+            }
+            else if (objectFile.GameData is ATF atf)
+            {
+                ImportATFText(atf, objectFile.Name, value, openedFileDir, parameters);
             }
             else if (objectFile.GameData is BMD bmd)
             {
@@ -278,6 +291,74 @@ namespace PersonaEditorCMD
             var exp = ptp.ExportTXT(parameters.RemoveSplit, Static.OldEncoding()).Select(x => $"{objectFileName}\t{x}");
 
             File.AppendAllLines(path, exp);
+        }
+
+        static void ExportATFText(ATF atf, string objectFileName, string value, string openedFileDir, Parameters parameters)
+        {
+            string path = value == "" ? Path.Combine(openedFileDir, Path.GetFileNameWithoutExtension(objectFileName) + ".TXT") : value;
+            File.AppendAllLines(path, atf.ExportText(objectFileName, parameters.RemoveSplit));
+        }
+
+        static bool ImportATFText(ATF atf, string objectFileName, string value, string openedFileDir, Parameters parameters)
+        {
+            string path = value == "" ? Path.Combine(openedFileDir, Path.GetFileNameWithoutExtension(objectFileName) + ".TXT") : value;
+
+            if (!File.Exists(path))
+                return false;
+
+            var rows = File.ReadAllLines(path, parameters.FileEncoding)
+                .Select(x => x.Split('\t'))
+                .ToList();
+
+            LineMap map = new LineMap(parameters.Map);
+            List<(int Index, string Text)> imported = new List<(int Index, string Text)>();
+
+            foreach (var row in rows)
+            {
+                if (TryGetATFTranslation(row, objectFileName, map, out int index, out string text))
+                    imported.Add((index, text));
+            }
+
+            atf.ImportTextByIndex(imported);
+            return true;
+        }
+
+        static bool TryGetATFTranslation(string[] row, string objectFileName, LineMap map, out int index, out string text)
+        {
+            index = -1;
+            text = "";
+
+            if (row.Length >= 4 && row[0].Equals(objectFileName, StringComparison.CurrentCultureIgnoreCase))
+            {
+                if (int.TryParse(row[1], out index))
+                {
+                    text = row[3];
+                    return !string.IsNullOrEmpty(text);
+                }
+            }
+
+            if (row.Length >= map.MinLength)
+            {
+                int fileNameColumn = map[LineMap.Type.FileName];
+                if (fileNameColumn >= 0 && !row[fileNameColumn].Equals(objectFileName, StringComparison.CurrentCultureIgnoreCase))
+                    return false;
+
+                int indexColumn = map[LineMap.Type.StringIndex] >= 0 ? map[LineMap.Type.StringIndex] : map[LineMap.Type.MSGindex];
+                int textColumn = map[LineMap.Type.NewText];
+                if (indexColumn >= 0 && textColumn >= 0 && int.TryParse(row[indexColumn], out index))
+                {
+                    text = row[textColumn];
+                    return !string.IsNullOrEmpty(text);
+                }
+            }
+
+            if (row.Length >= 3 && int.TryParse(row[0], out index))
+            {
+                text = row[^1];
+                return !string.IsNullOrEmpty(text);
+            }
+
+            return false;
         }
 
         static bool ImportPTPText(PTP ptp, string objectFileName, string value, string openedFileDir, Parameters parameters)

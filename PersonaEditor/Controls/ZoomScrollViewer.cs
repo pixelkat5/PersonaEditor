@@ -12,6 +12,10 @@ namespace PersonaEditor.Controls
         private const double MinZoomFactor = 1;
 
         private double _zoomFactor;
+        private bool isMiddleMousePanning;
+        private Point panStartPoint;
+        private double panStartHorizontalOffset;
+        private double panStartVerticalOffset;
 
         private double ZoomFactor
         {
@@ -33,7 +37,7 @@ namespace PersonaEditor.Controls
             }
         }
 
-        protected override void OnMouseWheel(MouseWheelEventArgs e)
+        protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
         {
             if (Keyboard.Modifiers == ModifierKeys.Control)
             {
@@ -45,8 +49,69 @@ namespace PersonaEditor.Controls
             }
             else
             {
-                base.OnMouseWheel(e);
+                base.OnPreviewMouseWheel(e);
             }
+        }
+
+        protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle)
+            {
+                isMiddleMousePanning = true;
+                panStartPoint = e.GetPosition(this);
+                panStartHorizontalOffset = HorizontalOffset;
+                panStartVerticalOffset = VerticalOffset;
+                Cursor = Cursors.ScrollAll;
+                CaptureMouse();
+                e.Handled = true;
+                return;
+            }
+
+            base.OnPreviewMouseDown(e);
+        }
+
+        protected override void OnPreviewMouseMove(MouseEventArgs e)
+        {
+            if (isMiddleMousePanning)
+            {
+                var point = e.GetPosition(this);
+                ScrollToHorizontalOffset(panStartHorizontalOffset + panStartPoint.X - point.X);
+                ScrollToVerticalOffset(panStartVerticalOffset + panStartPoint.Y - point.Y);
+                e.Handled = true;
+                return;
+            }
+
+            base.OnPreviewMouseMove(e);
+        }
+
+        protected override void OnPreviewMouseUp(MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Middle && isMiddleMousePanning)
+            {
+                EndMiddleMousePan();
+                e.Handled = true;
+                return;
+            }
+
+            base.OnPreviewMouseUp(e);
+        }
+
+        protected override void OnLostMouseCapture(MouseEventArgs e)
+        {
+            EndMiddleMousePan();
+            base.OnLostMouseCapture(e);
+        }
+
+        private void EndMiddleMousePan()
+        {
+            if (!isMiddleMousePanning)
+                return;
+
+            isMiddleMousePanning = false;
+            Cursor = null;
+
+            if (IsMouseCaptured)
+                ReleaseMouseCapture();
         }
 
         private void ZoomMouseWheel(MouseWheelEventArgs e)

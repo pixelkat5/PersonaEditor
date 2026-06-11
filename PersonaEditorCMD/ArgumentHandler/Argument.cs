@@ -56,6 +56,8 @@ namespace PersonaEditorCMD.ArgumentHandler
         {
             if (type == "bin")
                 return FormatEnum.BIN;
+            else if (type == "pac")
+                return FormatEnum.PAC;
             else if (type == "gsd")
                 return FormatEnum.BIN;
             else if (type == "spr")
@@ -76,10 +78,14 @@ namespace PersonaEditorCMD.ArgumentHandler
                 return FormatEnum.PM1;
             else if (type == "bmd")
                 return FormatEnum.BMD;
+            else if (type == "atf")
+                return FormatEnum.ATF;
             else if (type == "fnt")
                 return FormatEnum.FNT;
             else if (type == "ctpk")
                 return FormatEnum.CTPK;
+            else if (type == "hip")
+                return FormatEnum.HIP;
             else if (type == "bvp")
                 return FormatEnum.BVP;
             else if (type == "hex")
