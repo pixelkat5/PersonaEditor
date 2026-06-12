@@ -60,6 +60,7 @@ TestResults/
 *.GlobalUsings.g.cs
 project.assets.json
 project.nuget.cache
+AGENTS.md
 
 # Visual Studio 2015 cache/options directory
 .vs/
