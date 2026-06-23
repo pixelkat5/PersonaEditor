@@ -52,7 +52,13 @@ namespace PersonaEditorLib.SpriteContainer
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            int size = 0x1C + textures.Count * 8;
+            foreach (var entry in textures)
+                size += 4 + (entry.LocalExtraData?.Length ?? 0) + (entry.Payload?.Length ?? 0);
+            return size;
+        }
 
         public byte[] GetData()
         {

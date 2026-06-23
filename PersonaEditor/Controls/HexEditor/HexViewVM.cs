@@ -3,8 +3,6 @@ using AuxiliaryLibraries.WPF;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Windows.Media;
 
 namespace PersonaEditor.Controls.HexEditor
@@ -35,7 +33,7 @@ namespace PersonaEditor.Controls.HexEditor
     {
         public ObservableCollection<HexViewByteVM> Bytes { get; } = new ObservableCollection<HexViewByteVM>();
 
-        public void SetBytes(byte[] bytes)
+        public void SetBytes(ReadOnlySpan<byte> bytes)
         {
             if (bytes.Length <= 4)
                 for (int i = 0; i < bytes.Length; i++)
@@ -69,22 +67,16 @@ namespace PersonaEditor.Controls.HexEditor
             Notify("Offset");
         }
 
-        public void SetBytes(byte[] bytes)
+        public void SetBytes(ReadOnlySpan<byte> bytes)
         {
             if (bytes.Length <= 16)
             {
-                int[] pos = new int[] { 0 };
-
-                if (bytes.Length > 12)
-                    pos = new int[] { 0, 4, 8, 12 };
-                else if (bytes.Length > 8)
-                    pos = new int[] { 0, 4, 8 };
-                else if (bytes.Length > 4)
-                    pos = new int[] { 0, 4 };
-
-                var a = bytes.Split(pos).ToArray();
-                for (int i = 0; i < a.Length; i++)
-                    UInts[i].SetBytes(a[i]);
+                for (int i = 0; i < UInts.Count; i++)
+                {
+                    int offset = i * 4;
+                    if (offset < bytes.Length)
+                        UInts[i].SetBytes(bytes.Slice(offset, Math.Min(4, bytes.Length - offset)));
+                }
 
                 Encode(bytes);
             }
@@ -98,19 +90,15 @@ namespace PersonaEditor.Controls.HexEditor
                 UInts.Add(new HexViewUIntVM());
         }
 
-        private void Encode(byte[] bytes)
+        private void Encode(ReadOnlySpan<byte> bytes)
         {
-            asText = new string(Encoding.ASCII.GetChars(bytes).Select(x =>
+            char[] chars = new char[16];
+            for (int i = 0; i < chars.Length; i++)
             {
-                if (x < 0x20)
-                    return '.';
-                else
-                    return x;
-            }).ToArray());
+                chars[i] = i < bytes.Length && bytes[i] >= 0x20 && bytes[i] <= 0x7E ? (char)bytes[i] : '.';
+            }
 
-
-            while (asText.Length < 16)
-                asText += ".";
+            asText = new string(chars);
             Notify("AsText");
         }
 
@@ -174,14 +162,14 @@ namespace PersonaEditor.Controls.HexEditor
                 long available = stream.Length - stream.Position;
                 if (available >= 16)
                 {
-                    byte[] temp = new byte[16];
-                    stream.Read(temp, 0, 16);
+                    Span<byte> temp = stackalloc byte[16];
+                    stream.ReadExactly(temp);
                     line.SetBytes(temp);
                 }
                 else
                 {
-                    byte[] temp = new byte[available];
-                    stream.Read(temp, 0, (int)available);
+                    Span<byte> temp = stackalloc byte[(int)available];
+                    stream.ReadExactly(temp);
                     line.SetBytes(temp);
                 }
             }

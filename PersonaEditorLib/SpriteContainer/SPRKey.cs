@@ -77,6 +77,18 @@ namespace PersonaEditorLib.SpriteContainer
             }
         }
 
+        public SPRKey(int index, int textureIndex, int x, int y, int width, int height)
+        {
+            Index = index;
+            TextureIndex = textureIndex;
+            X1 = x;
+            Y1 = y;
+            X2 = x + width;
+            Y2 = y + height;
+            Comment = index.ToString();
+            CommentByte = new byte[16];
+        }
+
         public int Size
         {
             get { return 0x80; }

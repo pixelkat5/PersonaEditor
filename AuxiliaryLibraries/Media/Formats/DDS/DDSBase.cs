@@ -1,6 +1,7 @@
 ﻿using AuxiliaryLibraries.IO;
 using AuxiliaryLibraries.Tools;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
 {
     public class DDSBase
     {
-        static byte[] MagicNumber { get; } = new byte[] { 0x44, 0x44, 0x53, 0x20 };
+        private const uint MagicNumber = 0x20534444;
 
         public DDSHeader Header;
         public List<byte[]> dataList = new List<byte[]>();
@@ -25,10 +26,10 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
         {
             streamFile.Stream.Position = streamFile.Position;
 
-            byte[] magicNumberArray = new byte[4];
-            streamFile.Stream.Read(magicNumberArray, 0, 4);
+            Span<byte> magicNumberArray = stackalloc byte[4];
+            streamFile.Stream.ReadExactly(magicNumberArray);
 
-            if (magicNumberArray.SequenceEqual(MagicNumber))
+            if (BinaryPrimitives.ReadUInt32LittleEndian(magicNumberArray) == MagicNumber)
                 using (BinaryReader reader = new BinaryReader(streamFile.Stream, Encoding.ASCII, true))
                 {
                     Header = IOTools.FromBytes<DDSHeader>(reader.ReadBytes(124));
@@ -96,7 +97,7 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
             using (MemoryStream MS = new MemoryStream())
             using (BinaryWriter writer = new BinaryWriter(MS))
             {
-                MS.Write(MagicNumber, 0, 4);
+                writer.Write(MagicNumber);
                 writer.Write(IOTools.GetBytes(Header));
                 dataList.ForEach(x => writer.Write(x));
                 returned = MS.ToArray();

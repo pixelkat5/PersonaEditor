@@ -154,16 +154,16 @@ namespace PersonaEditor.Classes.Visual
 
         public Background(string imgPath, string xmlPath)
         {
-            try
-            {
-                image = new BitmapImage(new Uri(imgPath));
-                rect = new Rect(0, 0, image.PixelWidth, image.PixelHeight);
-                ParseDescription(xmlPath);
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(imgPath);
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            image = bitmap;
+            rect = new Rect(0, 0, image.PixelWidth, image.PixelHeight);
+            ParseDescription(xmlPath);
         }
 
         void ParseDescription(string FileName)
@@ -203,6 +203,7 @@ namespace PersonaEditor.Classes.Visual
 
             image = BitmapSource.Create(Width, Height, 96, 96, PixelFormats.Indexed1,
                 new BitmapPalette(new List<Color> { EmptyBackgroundColor }), new byte[Width * Height], Width);
+            image.Freeze();
 
             if (Changed)
                 BackgroundChanged?.Invoke(this);

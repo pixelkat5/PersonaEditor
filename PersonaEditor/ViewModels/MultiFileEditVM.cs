@@ -48,7 +48,7 @@ namespace PersonaEditor.ViewModels
                 //    PersonaEditorLib.Utilities.PersonaFile.GetFileType(Path.GetFileName(path)),
                 //    new StreamFile(FileStream, FileStream.Length, 0));
 
-                var file = GameFormatHelper.OpenFile(Path.GetFileName(path), File.ReadAllBytes(path));
+                var file = GameFormatHelper.OpenFile(path);
 
                 if (file != null)
                 {
@@ -68,8 +68,26 @@ namespace PersonaEditor.ViewModels
             {
                 var root = Tree.GetRoot();
                 if (root != null)
+                {
                     File.WriteAllBytes(path, root.GameData.GetData());
+
+                    if (root.GameData is PersonaEditorLib.SpriteContainer.TPC tpc && tpc.HasSpriteInfo && File.Exists(tpc.GtxSidecarPath))
+                        SaveGtxSidecar(path, tpc);
+                }
             }
+        }
+
+        private static void SaveGtxSidecar(string tpcSavePath, PersonaEditorLib.SpriteContainer.TPC tpc)
+        {
+            var sfd = new Microsoft.Win32.SaveFileDialog();
+            sfd.OverwritePrompt = true;
+            sfd.AddExtension = true;
+            sfd.InitialDirectory = Path.GetDirectoryName(tpcSavePath);
+            sfd.FileName = Path.GetFileName(Path.ChangeExtension(tpcSavePath, ".gtx"));
+            sfd.Filter = "GTX (*.gtx)|*.gtx";
+
+            if (sfd.ShowDialog() == true)
+                File.WriteAllBytes(sfd.FileName, tpc.GetGtxData());
         }
 
         public bool CloseFile()

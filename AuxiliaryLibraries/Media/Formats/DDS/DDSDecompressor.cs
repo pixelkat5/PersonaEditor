@@ -26,25 +26,22 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
 
             int step = fourCC == DDSFourCC.DXT1 ? 8 : 16;
 
-            byte[,,] pixel = new byte[height, width, 4];
             byte[] uncompressed_data = new byte[width * height * 4];
 
             for (int i = 0, index = 0; i < Heigth; i++)
                 for (int k = 0; k < Width; k++, index += step)
                     if (fourCC == DDSFourCC.DXT1)
-                        DDS_DXT1_GetPixels(pixel, k * 4, i * 4, data, index);
+                        DDS_DXT1_GetPixels(uncompressed_data, width, height, k * 4, i * 4, data, index);
                     else if (fourCC == DDSFourCC.DXT3)
-                        DDS_DXT3_GetPixels(pixel, k * 4, i * 4, data, index);
+                        DDS_DXT3_GetPixels(uncompressed_data, width, height, k * 4, i * 4, data, index);
                     else if (fourCC == DDSFourCC.DXT5)
-                        DDS_DXT5_GetPixels(pixel, k * 4, i * 4, data, index);
-
-            Buffer.BlockCopy(pixel, 0, uncompressed_data, 0, uncompressed_data.Length);
+                        DDS_DXT5_GetPixels(uncompressed_data, width, height, k * 4, i * 4, data, index);
 
             newData = uncompressed_data;
             return true;
         }
 
-        private static void DDS_DXT1_GetPixels(byte[,,] pixels, int x, int y, byte[] data, int dataIndex)
+        private static void DDS_DXT1_GetPixels(byte[] pixels, int width, int height, int x, int y, byte[] data, int dataIndex)
         {
             byte[,] palette = new byte[4, 4];
 
@@ -78,8 +75,8 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                 //palette[3, 3] = 0xFF;
             }
 
-            int pixHeight = Math.Min(pixels.GetLength(0) - y, 4);
-            int pixWidth = Math.Min(pixels.GetLength(1) - x, 4);
+            int pixHeight = Math.Min(height - y, 4);
+            int pixWidth = Math.Min(width - x, 4);
 
             int[,] pix = new int[4, 4];
 
@@ -93,19 +90,20 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
             for (int i = 0; i < pixHeight; i++)
                 for (int k = 0; k < pixWidth; k++)
                 {
-                    pixels[y + i, x + k, 0] = palette[pix[i, k], 0];
-                    pixels[y + i, x + k, 1] = palette[pix[i, k], 1];
-                    pixels[y + i, x + k, 2] = palette[pix[i, k], 2];
-                    pixels[y + i, x + k, 3] = palette[pix[i, k], 3];
+                    int offset = ((y + i) * width + x + k) * 4;
+                    pixels[offset] = palette[pix[i, k], 0];
+                    pixels[offset + 1] = palette[pix[i, k], 1];
+                    pixels[offset + 2] = palette[pix[i, k], 2];
+                    pixels[offset + 3] = palette[pix[i, k], 3];
                 }
         }
 
-        private static void DDS_DXT3_GetPixels(byte[,,] pixels, int x, int y, byte[] data, int dataIndex)
+        private static void DDS_DXT3_GetPixels(byte[] pixels, int width, int height, int x, int y, byte[] data, int dataIndex)
         {
-            DDS_DXT1_GetPixels(pixels, x, y, data, dataIndex + 8);
+            DDS_DXT1_GetPixels(pixels, width, height, x, y, data, dataIndex + 8);
 
-            int pixHeight = Math.Min(pixels.GetLength(0) - y, 4);
-            int pixWidth = Math.Min(pixels.GetLength(1) - x, 4);
+            int pixHeight = Math.Min(height - y, 4);
+            int pixWidth = Math.Min(width - x, 4);
 
             byte[] alpha = new byte[16];
 
@@ -117,12 +115,12 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
 
             for (int i = 0; i < pixHeight; i++)
                 for (int k = 0; k < pixWidth; k++)
-                    pixels[y + i, x + k, 3] = alpha[i * 4 + k];
+                    pixels[((y + i) * width + x + k) * 4 + 3] = alpha[i * 4 + k];
         }
 
-        private static void DDS_DXT5_GetPixels(byte[,,] pixels, int x, int y, byte[] data, int dataIndex)
+        private static void DDS_DXT5_GetPixels(byte[] pixels, int width, int height, int x, int y, byte[] data, int dataIndex)
         {
-            DDS_DXT1_GetPixels(pixels, x, y, data, dataIndex + 8);
+            DDS_DXT1_GetPixels(pixels, width, height, x, y, data, dataIndex + 8);
 
             byte[] alphaPalette = new byte[8];
             alphaPalette[0] = data[dataIndex];
@@ -148,11 +146,11 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                 for (int k = 0; k < 4; k++, ind++)
                     pix[i, k] = (int)(dat >> (ind * 3)) & 7;
 
-            int pixHeight = Math.Min(pixels.GetLength(0) - y, 4);
-            int pixWidth = Math.Min(pixels.GetLength(1) - x, 4);
+            int pixHeight = Math.Min(height - y, 4);
+            int pixWidth = Math.Min(width - x, 4);
             for (int i = 0; i < pixHeight; i++)
                 for (int k = 0; k < pixWidth; k++)
-                    pixels[y + i, x + k, 3] = alphaPalette[pix[i, k]];
+                    pixels[((y + i) * width + x + k) * 4 + 3] = alphaPalette[pix[i, k]];
         }
 
         private static void RGB565ToBGRA32(byte[,] palette, int paletteIndex, byte[] data, int dataIndex)

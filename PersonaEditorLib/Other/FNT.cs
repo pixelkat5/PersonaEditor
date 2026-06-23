@@ -234,28 +234,55 @@ namespace PersonaEditorLib.Other
         public void SetTable(XDocument xDoc)
         {
             XElement WT = xDoc.Element("WidthTable");
+            if (WT == null)
+                throw new InvalidDataException("FNT: WidthTable element was not found.");
+
+            int availableGlyphs = Compressed.GetDecompressedData().Count;
+            int requestedEntries = GetRequestedWidthTableEntries(WT);
+            if (requestedEntries > availableGlyphs + 1)
+                throw new InvalidDataException($"FNT: XML references {requestedEntries} glyph entries, but this FNT only has {availableGlyphs} glyph images.");
+
+            if (requestedEntries > WidthTable.Count)
+                WidthTable.Resize(requestedEntries);
+
+            int requestedGlyphs = Math.Min(requestedEntries, availableGlyphs);
+            if (requestedGlyphs > Header.Glyphs.Count)
+            {
+                Header.Resize(requestedGlyphs);
+                Reserved.Resize(requestedGlyphs);
+            }
 
             int index = 0;
 
-            try
+            foreach (var line in WT.Elements())
             {
-                foreach (var line in WT.Elements())
+                int lineindex = Convert.ToInt32(line.Name.LocalName.Split('_')[1]);
+                foreach (var glyph in line.Elements())
                 {
-                    int lineindex = Convert.ToInt32(line.Name.LocalName.Split('_')[1]);
-                    foreach (var glyph in line.Elements())
-                    {
-                        int glyphindex = Convert.ToInt32(glyph.Name.LocalName.Split('_')[1]);
-                        index = (lineindex - 1) * 16 + (glyphindex - 1);
-                        WidthTable[index] = new VerticalCut(Convert.ToByte(glyph.Element("LeftCut").Value), Convert.ToByte(glyph.Element("RightCut").Value));
-                    }
+                    int glyphindex = Convert.ToInt32(glyph.Name.LocalName.Split('_')[1]);
+                    index = (lineindex - 1) * 16 + (glyphindex - 1);
+                    WidthTable[index] = new VerticalCut(Convert.ToByte(glyph.Element("LeftCut").Value), Convert.ToByte(glyph.Element("RightCut").Value));
                 }
-            }
-            catch (Exception e)
-            {
-                // Logging.Write("PersonaEditorLib", e.Message);
             }
 
             //Logging.Write("PersonaEditorLib", "Width Table was writed. Get " + index + " glyphs");
+        }
+
+        private static int GetRequestedWidthTableEntries(XElement widthTable)
+        {
+            int count = 0;
+            foreach (var line in widthTable.Elements())
+            {
+                int lineindex = Convert.ToInt32(line.Name.LocalName.Split('_')[1]);
+                foreach (var glyph in line.Elements())
+                {
+                    int glyphindex = Convert.ToInt32(glyph.Name.LocalName.Split('_')[1]);
+                    int index = (lineindex - 1) * 16 + (glyphindex - 1);
+                    count = Math.Max(count, index + 1);
+                }
+            }
+
+            return count;
         }
 
         #endregion ITable

@@ -173,76 +173,138 @@ namespace PersonaEditorLib
 
         public static ImageData DrawText(IEnumerable<TextBaseElement> text, PersonaFont personaFont, Dictionary<int, byte> Shift, int LineSpacing)
         {
-            if (text != null && personaFont != null)
+            if (text == null || personaFont == null)
+                return new ImageData();
+
+            List<byte[][]> lines = new List<byte[][]>();
+            List<byte[][]> glyphs = new List<byte[][]>();
+
+            foreach (var a in text)
             {
-                ImageData returned = new ImageData();
-                ImageData line = new ImageData();
-                foreach (var a in text)
+                if (a.IsText)
                 {
-                    if (a.IsText)
+                    for (int i = 0; i < a.Data.Length; i++)
                     {
-                        for (int i = 0; i < a.Data.Length; i++)
+                        int index = 0;
+
+                        if (0x20 <= a.Data[i] && a.Data[i] < 0x80)
+                            index = a.Data[i];
+                        else if (0x80 <= a.Data[i] && a.Data[i] < 0xF0)
                         {
-                            int index = 0;
-
-                            if (0x20 <= a.Data[i] & a.Data[i] < 0x80)
-                                index = a.Data[i];
-                            else if (0x80 <= a.Data[i] & a.Data[i] < 0xF0)
-                            {
-                                index = (a.Data[i] - 0x81) * 0x80 + a.Data[i + 1] + 0x20;
-                                i++;
-                            }
-
-                            var Glyph = personaFont.GetGlyph(index);
-
-                            if (Glyph.Item1 != null)
-                            {
-                                byte shift;
-                                bool shiftb = Shift.TryGetValue(index, out shift);
-                                ImageData glyph = new ImageData(Glyph.Item1, personaFont.PixelFormat, personaFont.Width, personaFont.Height);
-                                byte Left = Glyph.Item2.Left;
-                                byte Right = Glyph.Item2.Right;
-                                glyph = shiftb == false ? Crop(glyph, new Rectangle(Left, 0, Right - Left, glyph.PixelHeight))
-                                    : ImageData.Shift(Crop(glyph, new Rectangle(Left, 0, Right - Left, glyph.PixelHeight)), shift);
-                                line = MergeLeftRight(line, glyph, 1);
-                            }
+                            index = (a.Data[i] - 0x81) * 0x80 + a.Data[i + 1] + 0x20;
+                            i++;
                         }
-                    }
-                    else
-                    {
-                        if (ArrayTool.ByteArrayCompareWithSimplest(a.Data, new byte[] { 0x0A }))
+
+                        var Glyph = personaFont.GetGlyph(index);
+
+                        if (Glyph.Item1 != null)
                         {
-                            if (returned.IsEmpty)
-                            {
-                                if (line.IsEmpty)
-                                {
-                                    returned = new ImageData(PixelFormats.Indexed4, 1, 32);
-                                }
-                                else
-                                {
-                                    returned = line;
-                                    line = new ImageData();
-                                }
-                            }
-                            else
-                            {
-                                if (line.IsEmpty)
-                                {
-                                    returned = MergeUpDown(returned, new ImageData(PixelFormats.Indexed4, 1, 32), LineSpacing);
-                                }
-                                else
-                                {
-                                    returned = MergeUpDown(returned, line, LineSpacing);
-                                    line = new ImageData();
-                                }
-                            }
+                            Shift.TryGetValue(index, out byte shift);
+                            int Left = Glyph.Item2.Left;
+                            int Right = Glyph.Item2.Right;
+                            if (Right > Left)
+                                glyphs.Add(GetGlyphPixels(Glyph.Item1, personaFont.PixelFormat, personaFont.Width, personaFont.Height, Left, Right, shift));
                         }
                     }
                 }
-                returned = ImageData.MergeUpDown(returned, line, LineSpacing);
-                return returned;
+                else if (a.Data.Length == 1 && a.Data[0] == 0x0A)
+                {
+                    lines.Add(glyphs.Count == 0 ? CreateBlankLine(personaFont.Height) : BuildLine(glyphs, 1));
+                    glyphs.Clear();
+                }
             }
-            return new ImageData();
+
+            if (glyphs.Count > 0)
+                lines.Add(BuildLine(glyphs, 1));
+
+            if (lines.Count == 0)
+                return new ImageData();
+
+            byte[][] pixels = BuildTextImage(lines, LineSpacing);
+            return new ImageData(pixels, personaFont.PixelFormat, pixels[0].Length, pixels.Length);
+        }
+
+        private static byte[][] GetGlyphPixels(byte[] data, PixelFormat pixelFormat, int width, int height, int left, int right, int shift)
+        {
+            byte[][] source = GetPixels(data, pixelFormat, width, height);
+            int glyphWidth = right - left;
+            byte[][] glyph = new byte[height][];
+            for (int y = 0; y < height; y++)
+            {
+                glyph[y] = new byte[glyphWidth];
+                int sourceY = y - shift;
+                if (sourceY >= 0 && sourceY < source.Length)
+                {
+                    int sourceX = Math.Max(left, 0);
+                    int targetX = sourceX - left;
+                    int copyWidth = Math.Min(right, width) - sourceX;
+                    if (copyWidth > 0)
+                        Buffer.BlockCopy(source[sourceY], sourceX, glyph[y], targetX, copyWidth);
+                }
+            }
+            return glyph;
+        }
+
+        private static byte[][] CreateBlankLine(int height)
+        {
+            byte[][] line = new byte[height][];
+            for (int i = 0; i < height; i++)
+                line[i] = new byte[1];
+            return line;
+        }
+
+        private static byte[][] BuildLine(List<byte[][]> glyphs, int overlap)
+        {
+            int height = glyphs[0].Length;
+            int width = 0;
+            foreach (var glyph in glyphs)
+                width += glyph[0].Length;
+            width -= Math.Max(0, glyphs.Count - 1) * overlap;
+
+            byte[][] line = new byte[height][];
+            for (int y = 0; y < height; y++)
+                line[y] = new byte[width];
+
+            int x = 0;
+            foreach (var glyph in glyphs)
+            {
+                for (int y = 0; y < height; y++)
+                    Buffer.BlockCopy(glyph[y], 0, line[y], x, glyph[y].Length);
+                x += glyph[0].Length - overlap;
+            }
+
+            return line;
+        }
+
+        private static byte[][] BuildTextImage(List<byte[][]> lines, int lineSpacing)
+        {
+            int width = 0;
+            int height = lines[0].Length;
+            foreach (var line in lines)
+                width = Math.Max(width, line[0].Length);
+            for (int i = 1; i < lines.Count; i++)
+                height += lines[i].Length - lineSpacing;
+
+            byte[][] pixels = new byte[height][];
+            for (int y = 0; y < height; y++)
+                pixels[y] = new byte[width];
+
+            int yOffset = 0;
+            foreach (var line in lines)
+            {
+                for (int y = 0; y < line.Length; y++)
+                {
+                    int destY = yOffset + y;
+                    for (int x = 0; x < line[y].Length; x++)
+                    {
+                        if (pixels[destY][x] == 0)
+                            pixels[destY][x] = line[y][x];
+                    }
+                }
+                yOffset += line.Length - lineSpacing;
+            }
+
+            return pixels;
         }
 
         public static ImageData MergeLeftRight(ImageData left, ImageData right, int horizontalshift)

@@ -51,7 +51,7 @@ namespace PersonaEditorLib.SpriteContainer
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
-        public int GetSize() => GetData().Length;
+        public int GetSize() => 0x28 + entries.Count * Marshal.SizeOf(typeof(SPR3EntryHeader)) + keys.Count * 0x80 + ctpk.GetSize();
 
         public byte[] GetData()
         {

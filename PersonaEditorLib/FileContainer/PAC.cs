@@ -27,7 +27,32 @@ namespace PersonaEditorLib.FileContainer
 
         public FormatEnum Type => FormatEnum.PAC;
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            int nameLength = Math.Max(fileNameLength, GetMaxNameLength(SubFiles.Select(x => Path.GetFileName(x.Name)).ToArray()));
+            int entrySize = GetEntrySize(nameLength, HasNameId);
+            int headerSize = 0x20 + entrySize * SubFiles.Count;
+
+            if (HasFileHeaderEndPadding)
+                headerSize += Alignment(headerSize, 0x80);
+
+            int fileOffset = 0;
+            foreach (var subFile in SubFiles)
+            {
+                if (HasFileHeaderEndPadding)
+                    fileOffset += Alignment(fileOffset, 0x80);
+
+                int storedSize = subFile.GameData.GetSize();
+
+                if (!HasNoByteAlignment)
+                    storedSize += Alignment(storedSize, 0x10);
+                if (HasFileHeaderEndPadding)
+                    storedSize += Alignment(storedSize, 0x80);
+                fileOffset += storedSize;
+            }
+
+            return headerSize + fileOffset;
+        }
 
         public byte[] GetData()
         {

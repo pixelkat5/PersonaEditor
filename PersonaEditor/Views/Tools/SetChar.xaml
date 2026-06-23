@@ -28,6 +28,9 @@
 
         <StatusBar>
             <ComboBox Width="100" ItemsSource="{Binding FontList}" SelectedIndex="{Binding FontSelect}"/>
+            <Separator/>
+            <Button Content="Export TSV" Command="{Binding ExportTsv}" Padding="6,1"/>
+            <Button Content="Import TSV" Command="{Binding ImportTsv}" Padding="6,1"/>
         </StatusBar>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">

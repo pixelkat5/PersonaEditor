@@ -59,7 +59,16 @@ namespace PersonaEditorLib.FileContainer
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            int size = (SubFiles.Count + 1) * 12;
+            foreach (var subFile in SubFiles)
+            {
+                size += subFile.GameData.GetSize();
+                size += IOTools.Alignment(size, 16);
+            }
+            return size;
+        }
 
         public byte[] GetData()
         {
@@ -72,9 +81,10 @@ namespace PersonaEditorLib.FileContainer
 
                 for (int i = 0; i < SubFiles.Count; i++)
                 {
-                    Entry.Add(new int[] { FlagList[i], (int)writer.BaseStream.Position, SubFiles[i].GameData.GetSize() });
+                    byte[] data = SubFiles[i].GameData.GetData();
+                    Entry.Add(new int[] { FlagList[i], (int)writer.BaseStream.Position, data.Length });
 
-                    writer.Write(SubFiles[i].GameData.GetData());
+                    writer.Write(data);
                     writer.Write(new byte[IOTools.Alignment(writer.BaseStream.Position, 16)]);
                 }
 

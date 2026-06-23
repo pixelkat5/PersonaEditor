@@ -126,7 +126,16 @@ namespace PersonaEditorLib.FileContainer
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            int size = 0;
+            foreach (var element in SubFiles)
+            {
+                size += 4 + element.GameData.GetSize();
+                size += IOTools.Alignment(size, 16);
+            }
+            return size;
+        }
 
         public byte[] GetData()
         {
@@ -135,8 +144,9 @@ namespace PersonaEditorLib.FileContainer
             {
                 foreach (var element in SubFiles)
                 {
-                    writer.Write(element.GameData.GetSize());
-                    writer.Write(element.GameData.GetData());
+                    byte[] data = element.GameData.GetData();
+                    writer.Write(data.Length);
+                    writer.Write(data);
                     writer.Write(new byte[IOTools.Alignment(writer.BaseStream.Position, 16)]);
                 }
                 return MS.ToArray();

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
@@ -12,44 +13,44 @@ namespace AuxiliaryLibraries.IO
 
         public override short ReadInt16()
         {
-            var data = base.ReadBytes(2);
-            Array.Reverse(data);
-            return BitConverter.ToInt16(data, 0);
+            Span<byte> data = stackalloc byte[2];
+            BaseStream.ReadExactly(data);
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReadInt16BigEndian(data) : BinaryPrimitives.ReadInt16LittleEndian(data);
         }
 
         public override ushort ReadUInt16()
         {
-            var data = base.ReadBytes(2);
-            Array.Reverse(data);
-            return BitConverter.ToUInt16(data, 0);
+            Span<byte> data = stackalloc byte[2];
+            BaseStream.ReadExactly(data);
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReadUInt16BigEndian(data) : BinaryPrimitives.ReadUInt16LittleEndian(data);
         }
 
         public override int ReadInt32()
         {
-            var data = base.ReadBytes(4);
-            Array.Reverse(data);
-            return BitConverter.ToInt32(data, 0);
+            Span<byte> data = stackalloc byte[4];
+            BaseStream.ReadExactly(data);
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReadInt32BigEndian(data) : BinaryPrimitives.ReadInt32LittleEndian(data);
         }
 
         public override uint ReadUInt32()
         {
-            var data = base.ReadBytes(4);
-            Array.Reverse(data);
-            return BitConverter.ToUInt32(data, 0);
+            Span<byte> data = stackalloc byte[4];
+            BaseStream.ReadExactly(data);
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReadUInt32BigEndian(data) : BinaryPrimitives.ReadUInt32LittleEndian(data);
         }
 
         public override long ReadInt64()
         {
-            var data = base.ReadBytes(8);
-            Array.Reverse(data);
-            return BitConverter.ToInt64(data, 0);
+            Span<byte> data = stackalloc byte[8];
+            BaseStream.ReadExactly(data);
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReadInt64BigEndian(data) : BinaryPrimitives.ReadInt64LittleEndian(data);
         }
 
         public override ulong ReadUInt64()
         {
-            var data = base.ReadBytes(8);
-            Array.Reverse(data);
-            return BitConverter.ToUInt64(data, 0);
+            Span<byte> data = stackalloc byte[8];
+            BaseStream.ReadExactly(data);
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReadUInt64BigEndian(data) : BinaryPrimitives.ReadUInt64LittleEndian(data);
         }
     }
 }

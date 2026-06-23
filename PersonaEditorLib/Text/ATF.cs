@@ -26,7 +26,16 @@ namespace PersonaEditorLib.Text
 
         public FormatEnum Type => FormatEnum.ATF;
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            int textLength = 0;
+            foreach (var entry in entries)
+            {
+                string text = string.IsNullOrEmpty(entry.NewText) ? entry.OldText : entry.NewText;
+                textLength += (text.Length + 1) * 2;
+            }
+            return checked((int)header.TextTableOffset + textLength);
+        }
         public byte[] GetData() => BuildData();
 
         public string[] ExportText(string fileName, bool removeSplit)

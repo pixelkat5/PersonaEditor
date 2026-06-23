@@ -9,6 +9,9 @@ namespace PersonaEditorLib.SpriteContainer
     public sealed class TPC : IGameData
     {
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
+        public List<SPRKey> KeyList { get; } = new List<SPRKey>();
+        public bool HasSpriteInfo => KeyList.Count != 0;
+        public string GtxSidecarPath { get; private set; }
 
         public TPC(byte[] data)
         {
@@ -50,6 +53,67 @@ namespace PersonaEditorLib.SpriteContainer
 
         public FormatEnum Type => FormatEnum.TPC;
 
+        public void LoadGtxSidecar(string path)
+        {
+            if (File.Exists(path))
+            {
+                GtxSidecarPath = path;
+                LoadGfuv(File.ReadAllBytes(path));
+            }
+        }
+
+        public byte[] GetGtxData() => GetGtxData(File.ReadAllBytes(GtxSidecarPath));
+
+        public byte[] GetGtxData(byte[] data)
+        {
+            byte[] returned = new byte[data.Length];
+            Buffer.BlockCopy(data, 0, returned, 0, data.Length);
+
+            int keyIndex = 0;
+            for (int offset = 0; offset <= returned.Length - 0x34; offset++)
+            {
+                if (returned[offset] != 0x47 || returned[offset + 1] != 0x46 || returned[offset + 2] != 0x55 || returned[offset + 3] != 0x56)
+                    continue;
+
+                using (var br = new BinaryReader(new MemoryStream(returned, offset, returned.Length - offset)))
+                {
+                    br.ReadInt32();
+                    int size = br.ReadInt32();
+                    if (size < 0x34 || offset + size > returned.Length)
+                        continue;
+
+                    br.ReadBytes(4);
+                    int count = br.ReadInt32();
+                    if (count < 0 || 0x34 + count * 8 > size)
+                        continue;
+
+                    string textureName = ReadFixedString(br, 0x24);
+                    if (GetTextureIndex(textureName) < 0)
+                        continue;
+
+                    if (keyIndex + count > KeyList.Count)
+                        throw new InvalidDataException("TPC: GFUV sprite count does not match loaded keys.");
+
+                    using (var bw = new BinaryWriter(new MemoryStream(returned)))
+                    {
+                        bw.BaseStream.Position = offset + 0x34;
+                        for (int i = 0; i < count; i++)
+                        {
+                            var key = KeyList[keyIndex++];
+                            bw.Write(Convert.ToInt16(key.X1));
+                            bw.Write(Convert.ToInt16(key.Y1));
+                            bw.Write(Convert.ToInt16(key.X2 - key.X1));
+                            bw.Write(Convert.ToInt16(key.Y2 - key.Y1));
+                        }
+                    }
+                }
+
+                offset += 3;
+            }
+
+            return returned;
+        }
+
         public int GetSize()
         {
             int size = 4;
@@ -82,6 +146,54 @@ namespace PersonaEditorLib.SpriteContainer
             if (end < 0)
                 end = bytes.Length;
             return Encoding.ASCII.GetString(bytes, 0, end).TrimEnd('\0', ' ');
+        }
+
+        private void LoadGfuv(byte[] data)
+        {
+            int keyIndex = KeyList.Count;
+            for (int offset = 0; offset <= data.Length - 0x34; offset++)
+            {
+                if (data[offset] != 0x47 || data[offset + 1] != 0x46 || data[offset + 2] != 0x55 || data[offset + 3] != 0x56)
+                    continue;
+
+                using (var br = new BinaryReader(new MemoryStream(data, offset, data.Length - offset)))
+                {
+                    br.ReadInt32();
+                    int size = br.ReadInt32();
+                    if (size < 0x34 || offset + size > data.Length)
+                        continue;
+
+                    br.ReadBytes(4);
+                    int count = br.ReadInt32();
+                    if (count < 0 || 0x34 + count * 8 > size)
+                        continue;
+
+                    string textureName = ReadFixedString(br, 0x24);
+                    int textureIndex = GetTextureIndex(textureName);
+                    if (textureIndex < 0)
+                        continue;
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        int x = br.ReadInt16();
+                        int y = br.ReadInt16();
+                        int width = br.ReadInt16();
+                        int height = br.ReadInt16();
+                        KeyList.Add(new SPRKey(keyIndex++, textureIndex, x, y, width, height));
+                    }
+                }
+
+                offset += 3;
+            }
+        }
+
+        private int GetTextureIndex(string textureName)
+        {
+            for (int i = 0; i < SubFiles.Count; i++)
+                if (string.Equals(Path.GetFileNameWithoutExtension(SubFiles[i].Name), textureName, StringComparison.OrdinalIgnoreCase))
+                    return i;
+
+            return -1;
         }
 
         private static void WriteFixedString(BinaryWriter bw, string value, int length)

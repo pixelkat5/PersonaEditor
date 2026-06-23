@@ -94,7 +94,20 @@ namespace PersonaEditorLib.Sprite
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            ValidateBitmapSizes();
+
+            int size = header.TexSectionOffset;
+            int bitmapIndex = 0;
+            foreach (var entry in entries)
+            {
+                size += GetBitmapDataSize(bitmaps[bitmapIndex++], entry.TexEntry.ImageFormat);
+                for (int mip = 1; mip < entry.TexEntry.MipLevel; mip++)
+                    size += GetBitmapDataSize(bitmaps[bitmapIndex++], entry.MipmapEntry.MipmapFormat);
+            }
+            return size;
+        }
 
         public byte[] GetData()
         {
@@ -226,6 +239,15 @@ namespace PersonaEditorLib.Sprite
                 Swizzle = new CtrSwizzle(bitmap.Width, bitmap.Height)
             };
             return CtpkImageCodec.Save(bitmap, settings);
+        }
+
+        private static int GetBitmapDataSize(Bitmap bitmap, int formatIndex)
+        {
+            if (!CtrFormats.TryGetValue(formatIndex, out var format))
+                throw new Exception($"CTPK: unsupported texture format {formatIndex}");
+
+            var swizzle = new CtrSwizzle(bitmap.Width, bitmap.Height);
+            return (swizzle.Width * swizzle.Height * format.BitDepth + 7) / 8;
         }
 
         private void ValidateBitmapSizes()
@@ -387,7 +409,7 @@ namespace PersonaEditorLib.Sprite
             {
                 var source = bitmap.PixelFormat == PixelFormats.Bgra32 ? bitmap : bitmap.ConvertTo(PixelFormats.Bgra32, null);
                 var pixels = source.CopyPixels();
-                var colors = new List<Color>();
+                var colors = new List<Color>(settings.Swizzle.Width * settings.Swizzle.Height);
 
                 foreach (var point in GetPointSequence(settings))
                 {
@@ -935,7 +957,19 @@ namespace PersonaEditorLib.Sprite
 
                 public static Rgb operator +(Rgb c, int mod) => new Rgb(Clamp(c.R + mod), Clamp(c.G + mod), Clamp(c.B + mod));
                 public static int operator -(Rgb c1, Rgb c2) => ErrorRgb(c1.R - c2.R, c1.G - c2.G, c1.B - c2.B);
-                public static Rgb Average(Rgb[] src) => new Rgb((int)src.Average(c => c.R), (int)src.Average(c => c.G), (int)src.Average(c => c.B));
+                public static Rgb Average(Rgb[] src)
+                {
+                    int r = 0;
+                    int g = 0;
+                    int b = 0;
+                    for (int i = 0; i < src.Length; i++)
+                    {
+                        r += src[i].R;
+                        g += src[i].G;
+                        b += src[i].B;
+                    }
+                    return new Rgb(r / src.Length, g / src.Length, b / src.Length);
+                }
                 public Rgb Scale(int limit) => limit == 16 ? new Rgb(R * 17, G * 17, B * 17) : new Rgb((R << 3) | (R >> 2), (G << 3) | (G >> 2), (B << 3) | (B >> 2));
                 public Rgb Unscale(int limit) => new Rgb(R * limit / 256, G * limit / 256, B * limit / 256);
                 public override int GetHashCode() => R | (G << 8) | (B << 16);
@@ -956,7 +990,7 @@ namespace PersonaEditorLib.Sprite
 
                 public Color Get(Func<PixelData> func)
                 {
-                    if (!queue.Any())
+                    if (queue.Count == 0)
                     {
                         var data = func();
                         var base0 = data.Block.Color0.Scale(data.Block.ColorDepth);
@@ -1000,9 +1034,17 @@ namespace PersonaEditorLib.Sprite
                     if (queue.Count != 16)
                         return;
 
-                    var colorsWindows = Enumerable.Range(0, 16).Select(j => is3dsOrder ? queue[Order3ds[Order3ds[Order3ds[j]]]] : queue[OrderNormal[j]]);
-                    var alpha = colorsWindows.Reverse().Aggregate(0ul, (a, b) => (a * 16) | (byte)(b.A / 16));
-                    var colors = colorsWindows.Select(x => new Rgb(x.R, x.G, x.B)).ToList();
+                    var ordered = new Color[16];
+                    var colors = new List<Rgb>(16);
+                    for (int j = 0; j < ordered.Length; j++)
+                    {
+                        ordered[j] = is3dsOrder ? queue[Order3ds[Order3ds[Order3ds[j]]]] : queue[OrderNormal[j]];
+                        colors.Add(new Rgb(ordered[j].R, ordered[j].G, ordered[j].B));
+                    }
+
+                    ulong alpha = 0;
+                    for (int j = ordered.Length - 1; j >= 0; j--)
+                        alpha = (alpha * 16) | (byte)(ordered[j].A / 16);
 
                     Block block;
                     if (colors.All(color => color == colors[0]))
@@ -1016,20 +1058,29 @@ namespace PersonaEditorLib.Sprite
 
                 private static Block PackSolidColor(Rgb c)
                 {
-                    return (from i in Enumerable.Range(0, 64)
-                            let r = SolidColorLookup[i * 256 + c.R]
-                            let g = SolidColorLookup[i * 256 + c.G]
-                            let b = SolidColorLookup[i * 256 + c.B]
-                            orderby ErrorRgb(r >> 8, g >> 8, b >> 8)
-                            let soln = new Solution
-                            {
-                                BlockColor = new Rgb(r, g, b),
-                                IntensityTable = Modifiers[(i >> 2) & 7],
-                                SelectorMSB = (i & 2) == 2 ? 0xFF : 0,
-                                SelectorLSB = (i & 1) == 1 ? 0xFF : 0
-                            }
-                            select new SolutionSet(false, (i & 32) == 32, soln, soln).ToBlock())
-                        .First();
+                    int best = 0;
+                    int bestError = int.MaxValue;
+                    for (int i = 0; i < 64; i++)
+                    {
+                        int r = SolidColorLookup[i * 256 + c.R];
+                        int g = SolidColorLookup[i * 256 + c.G];
+                        int b = SolidColorLookup[i * 256 + c.B];
+                        int error = ErrorRgb(r >> 8, g >> 8, b >> 8);
+                        if (error < bestError)
+                        {
+                            bestError = error;
+                            best = i;
+                        }
+                    }
+
+                    var soln = new Solution
+                    {
+                        BlockColor = new Rgb(SolidColorLookup[best * 256 + c.R], SolidColorLookup[best * 256 + c.G], SolidColorLookup[best * 256 + c.B]),
+                        IntensityTable = Modifiers[(best >> 2) & 7],
+                        SelectorMSB = (best & 2) == 2 ? 0xFF : 0,
+                        SelectorLSB = (best & 1) == 1 ? 0xFF : 0
+                    };
+                    return new SolutionSet(false, (best & 32) == 32, soln, soln).ToBlock();
                 }
             }
 
@@ -1159,16 +1210,36 @@ namespace PersonaEditorLib.Sprite
 
                 public bool ComputeDeltas(params int[] deltas)
                 {
-                    return TestUnscaledColors(from zd in deltas
-                                              let z = zd + BaseColor.B
-                                              where z >= 0 && z < limit
-                                              from yd in deltas
-                                              let y = yd + BaseColor.G
-                                              where y >= 0 && y < limit
-                                              from xd in deltas
-                                              let x = xd + BaseColor.R
-                                              where x >= 0 && x < limit
-                                              select new Rgb(x, y, z));
+                    bool success = false;
+                    foreach (int zd in deltas)
+                    {
+                        int z = zd + BaseColor.B;
+                        if (z < 0 || z >= limit)
+                            continue;
+                        foreach (int yd in deltas)
+                        {
+                            int y = yd + BaseColor.G;
+                            if (y < 0 || y >= limit)
+                                continue;
+                            foreach (int xd in deltas)
+                            {
+                                int x = xd + BaseColor.R;
+                                if (x < 0 || x >= limit)
+                                    continue;
+
+                                foreach (var t in Modifiers)
+                                {
+                                    if (EvaluateSolution(new Rgb(x, y, z), t))
+                                    {
+                                        success = true;
+                                        if (BestSolution.Error == 0)
+                                            return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return success;
                 }
 
                 private bool TestUnscaledColors(IEnumerable<Rgb> colors)
@@ -1232,33 +1303,33 @@ namespace PersonaEditorLib.Sprite
 
                 public static bool RepackEtc1CompressedBlock(List<Rgb> colors, out Block block)
                 {
-                    foreach (var flip in new[] { false, true })
+                    for (int flipIndex = 0; flipIndex < 2; flipIndex++)
                     {
-                        var all0 = colors.Where((c, j) => (j / (flip ? 2 : 8)) % 2 == 0).ToArray();
-                        var p0 = all0.Distinct().ToArray();
+                        bool flip = flipIndex == 1;
+                        var px = SplitColors(colors, flip);
+                        var all0 = px[0];
+                        var p0 = DistinctSmall(all0);
                         if (p0.Length > 4) continue;
 
-                        var all1 = colors.Where((c, j) => (j / (flip ? 2 : 8)) % 2 == 1).ToArray();
-                        var p1 = all1.Distinct().ToArray();
+                        var all1 = px[1];
+                        var p1 = DistinctSmall(all1);
                         if (p1.Length > 4) continue;
 
-                        foreach (var diff in new[] { false, true })
+                        for (int diffIndex = 0; diffIndex < 2; diffIndex++)
                         {
+                            bool diff = diffIndex == 1;
                             if (!diff)
                             {
-                                var tables0 = Enumerable.Range(0, 8).Where(i => p0.All(c => Lookup16[i][c.R] && Lookup16[i][c.G] && Lookup16[i][c.B])).ToList();
-                                if (!tables0.Any()) continue;
-                                var tables1 = Enumerable.Range(0, 8).Where(i => p1.All(c => Lookup16[i][c.R] && Lookup16[i][c.G] && Lookup16[i][c.B])).ToList();
-                                if (!tables1.Any()) continue;
+                                var tables0 = GetTables(p0, Lookup16);
+                                if (tables0.Count == 0) continue;
+                                var tables1 = GetTables(p1, Lookup16);
+                                if (tables1.Count == 0) continue;
 
                                 var opt0 = new Optimizer(all0, 16, 1);
                                 Solution soln0 = null;
                                 foreach (var ti in tables0)
                                 {
-                                    var rs = Enumerable.Range(0, 16).Where(a => p0.All(c => Lookup16Big[ti][a].Contains(c.R))).ToArray();
-                                    var gs = Enumerable.Range(0, 16).Where(a => p0.All(c => Lookup16Big[ti][a].Contains(c.G))).ToArray();
-                                    var bs = Enumerable.Range(0, 16).Where(a => p0.All(c => Lookup16Big[ti][a].Contains(c.B))).ToArray();
-                                    soln0 = opt0.FindExactMatches(from r in rs from g in gs from b in bs select new Rgb(r, g, b), Modifiers[ti]).FirstOrDefault();
+                                    soln0 = opt0.FindExactMatch(GetCandidates(p0, Lookup16Big[ti], 16, 0), GetCandidates(p0, Lookup16Big[ti], 16, 1), GetCandidates(p0, Lookup16Big[ti], 16, 2), Modifiers[ti]);
                                     if (soln0 != null) break;
                                 }
                                 if (soln0 == null) continue;
@@ -1266,10 +1337,7 @@ namespace PersonaEditorLib.Sprite
                                 var opt1 = new Optimizer(all1, 16, 1);
                                 foreach (var ti in tables1)
                                 {
-                                    var rs = Enumerable.Range(0, 16).Where(a => p1.All(c => Lookup16Big[ti][a].Contains(c.R))).ToArray();
-                                    var gs = Enumerable.Range(0, 16).Where(a => p1.All(c => Lookup16Big[ti][a].Contains(c.G))).ToArray();
-                                    var bs = Enumerable.Range(0, 16).Where(a => p1.All(c => Lookup16Big[ti][a].Contains(c.B))).ToArray();
-                                    var soln1 = opt1.FindExactMatches(from r in rs from g in gs from b in bs select new Rgb(r, g, b), Modifiers[ti]).FirstOrDefault();
+                                    var soln1 = opt1.FindExactMatch(GetCandidates(p1, Lookup16Big[ti], 16, 0), GetCandidates(p1, Lookup16Big[ti], 16, 1), GetCandidates(p1, Lookup16Big[ti], 16, 2), Modifiers[ti]);
                                     if (soln1 != null)
                                     {
                                         block = new SolutionSet(flip, diff, soln0, soln1).ToBlock();
@@ -1279,42 +1347,28 @@ namespace PersonaEditorLib.Sprite
                             }
                             else
                             {
-                                var tables0 = Enumerable.Range(0, 8).Where(i => p0.All(c => Lookup32[i][c.R] && Lookup32[i][c.G] && Lookup32[i][c.B])).ToList();
-                                if (!tables0.Any()) continue;
-                                var tables1 = Enumerable.Range(0, 8).Where(i => p1.All(c => Lookup32[i][c.R] && Lookup32[i][c.G] && Lookup32[i][c.B])).ToList();
-                                if (!tables1.Any()) continue;
+                                var tables0 = GetTables(p0, Lookup32);
+                                if (tables0.Count == 0) continue;
+                                var tables1 = GetTables(p1, Lookup32);
+                                if (tables1.Count == 0) continue;
 
                                 var opt0 = new Optimizer(all0, 32, 1);
                                 var solns0 = new List<Solution>();
                                 foreach (var ti in tables0)
                                 {
-                                    var rs = Enumerable.Range(0, 32).Where(a => p0.All(c => Lookup32Big[ti][a].Contains(c.R))).ToArray();
-                                    var gs = Enumerable.Range(0, 32).Where(a => p0.All(c => Lookup32Big[ti][a].Contains(c.G))).ToArray();
-                                    var bs = Enumerable.Range(0, 32).Where(a => p0.All(c => Lookup32Big[ti][a].Contains(c.B))).ToArray();
-                                    solns0.AddRange(opt0.FindExactMatches(from r in rs from g in gs from b in bs select new Rgb(r, g, b), Modifiers[ti]));
+                                    opt0.AddExactMatches(solns0, GetCandidates(p0, Lookup32Big[ti], 32, 0), GetCandidates(p0, Lookup32Big[ti], 32, 1), GetCandidates(p0, Lookup32Big[ti], 32, 2), Modifiers[ti]);
                                 }
-                                if (!solns0.Any()) continue;
+                                if (solns0.Count == 0) continue;
 
                                 var opt1 = new Optimizer(all1, 32, 1);
                                 foreach (var ti in tables1)
                                 {
-                                    var rs = Enumerable.Range(0, 32).Where(a => p1.All(c => Lookup32Big[ti][a].Contains(c.R))).ToArray();
-                                    var gs = Enumerable.Range(0, 32).Where(a => p1.All(c => Lookup32Big[ti][a].Contains(c.G))).ToArray();
-                                    var bs = Enumerable.Range(0, 32).Where(a => p1.All(c => Lookup32Big[ti][a].Contains(c.B))).ToArray();
+                                    var rs = GetCandidates(p1, Lookup32Big[ti], 32, 0);
+                                    var gs = GetCandidates(p1, Lookup32Big[ti], 32, 1);
+                                    var bs = GetCandidates(p1, Lookup32Big[ti], 32, 2);
                                     foreach (var soln0 in solns0)
                                     {
-                                        var q = from r in rs
-                                                let dr = r - soln0.BlockColor.R
-                                                where dr >= -4 && dr < 4
-                                                from g in gs
-                                                let dg = g - soln0.BlockColor.G
-                                                where dg >= -4 && dg < 4
-                                                from b in bs
-                                                let db = b - soln0.BlockColor.B
-                                                where db >= -4 && db < 4
-                                                select new Rgb(r, g, b);
-
-                                        var soln1 = opt1.FindExactMatches(q, Modifiers[ti]).FirstOrDefault();
+                                        var soln1 = opt1.FindDiffExactMatch(rs, gs, bs, soln0.BlockColor, Modifiers[ti]);
                                         if (soln1 != null)
                                         {
                                             block = new SolutionSet(flip, diff, soln0, soln1).ToBlock();
@@ -1330,14 +1384,68 @@ namespace PersonaEditorLib.Sprite
                     return false;
                 }
 
+                private Solution FindExactMatch(List<int> rs, List<int> gs, List<int> bs, int[] intensityTable)
+                {
+                    for (int r = 0; r < rs.Count; r++)
+                        for (int g = 0; g < gs.Count; g++)
+                            for (int b = 0; b < bs.Count; b++)
+                            {
+                                BestSolution.Error = 1;
+                                if (EvaluateSolution(new Rgb(rs[r], gs[g], bs[b]), intensityTable))
+                                    return BestSolution;
+                            }
+                    return null;
+                }
+
+                private void AddExactMatches(List<Solution> solutions, List<int> rs, List<int> gs, List<int> bs, int[] intensityTable)
+                {
+                    for (int r = 0; r < rs.Count; r++)
+                        for (int g = 0; g < gs.Count; g++)
+                            for (int b = 0; b < bs.Count; b++)
+                            {
+                                BestSolution.Error = 1;
+                                if (EvaluateSolution(new Rgb(rs[r], gs[g], bs[b]), intensityTable))
+                                    solutions.Add(BestSolution);
+                            }
+                }
+
+                private Solution FindDiffExactMatch(List<int> rs, List<int> gs, List<int> bs, Rgb baseColor, int[] intensityTable)
+                {
+                    for (int r = 0; r < rs.Count; r++)
+                    {
+                        int dr = rs[r] - baseColor.R;
+                        if (dr < -4 || dr >= 4)
+                            continue;
+                        for (int g = 0; g < gs.Count; g++)
+                        {
+                            int dg = gs[g] - baseColor.G;
+                            if (dg < -4 || dg >= 4)
+                                continue;
+                            for (int b = 0; b < bs.Count; b++)
+                            {
+                                int db = bs[b] - baseColor.B;
+                                if (db < -4 || db >= 4)
+                                    continue;
+
+                                BestSolution.Error = 1;
+                                if (EvaluateSolution(new Rgb(rs[r], gs[g], bs[b]), intensityTable))
+                                    return BestSolution;
+                            }
+                        }
+                    }
+                    return null;
+                }
+
                 public static Block Encode(List<Rgb> colors)
                 {
                     var best = new SolutionSet();
-                    foreach (var flip in new[] { false, true })
+                    for (int flipIndex = 0; flipIndex < 2; flipIndex++)
                     {
-                        var px = new[] { 0, 1 }.Select(i => colors.Where((c, j) => (j / (flip ? 2 : 8)) % 2 == i).ToArray()).ToArray();
-                        foreach (var diff in new[] { false, true })
+                        bool flip = flipIndex == 1;
+                        var px = SplitColors(colors, flip);
+                        for (int diffIndex = 0; diffIndex < 2; diffIndex++)
                         {
+                            bool diff = diffIndex == 1;
                             var solns = new Solution[2];
                             int limit = diff ? 32 : 16;
                             int i;
@@ -1379,6 +1487,88 @@ namespace PersonaEditorLib.Sprite
                         }
                     }
                     return best.ToBlock();
+                }
+
+                private static Rgb[][] SplitColors(List<Rgb> colors, bool flip)
+                {
+                    var px = new[] { new Rgb[8], new Rgb[8] };
+                    var counts = new int[2];
+                    int divisor = flip ? 2 : 8;
+                    for (int j = 0; j < colors.Count; j++)
+                    {
+                        int group = (j / divisor) % 2;
+                        px[group][counts[group]++] = colors[j];
+                    }
+                    return px;
+                }
+
+                private static Rgb[] DistinctSmall(Rgb[] colors)
+                {
+                    var distinct = new List<Rgb>(colors.Length);
+                    for (int i = 0; i < colors.Length; i++)
+                    {
+                        bool exists = false;
+                        for (int j = 0; j < distinct.Count; j++)
+                        {
+                            if (distinct[j] == colors[i])
+                            {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists)
+                            distinct.Add(colors[i]);
+                    }
+                    return distinct.ToArray();
+                }
+
+                private static List<int> GetTables(Rgb[] colors, bool[][] lookup)
+                {
+                    var tables = new List<int>(8);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        bool ok = true;
+                        for (int j = 0; j < colors.Length; j++)
+                        {
+                            if (!lookup[i][colors[j].R] || !lookup[i][colors[j].G] || !lookup[i][colors[j].B])
+                            {
+                                ok = false;
+                                break;
+                            }
+                        }
+                        if (ok)
+                            tables.Add(i);
+                    }
+                    return tables;
+                }
+
+                private static List<int> GetCandidates(Rgb[] colors, byte[][] lookup, int limit, int channel)
+                {
+                    var candidates = new List<int>(limit);
+                    for (int i = 0; i < limit; i++)
+                    {
+                        bool ok = true;
+                        for (int j = 0; j < colors.Length; j++)
+                        {
+                            byte value = channel == 0 ? colors[j].R : channel == 1 ? colors[j].G : colors[j].B;
+                            if (!Contains(lookup[i], value))
+                            {
+                                ok = false;
+                                break;
+                            }
+                        }
+                        if (ok)
+                            candidates.Add(i);
+                    }
+                    return candidates;
+                }
+
+                private static bool Contains(byte[] values, byte value)
+                {
+                    for (int i = 0; i < values.Length; i++)
+                        if (values[i] == value)
+                            return true;
+                    return false;
                 }
             }
 

@@ -42,20 +42,18 @@ namespace PersonaEditor.Classes.Managers
 
         public PersonaFont GetPersonaFont(string name)
         {
-            if (encodings.ContainsKey(name))
-                return encodings[name];
-            else
+            if (encodings.TryGetValue(name, out var encoding))
+                return encoding;
+
+            try
             {
-                try
-                {
-                    var enc = new PersonaFont(Path.Combine(sourcedir, name + ".fnt"));
-                    encodings.Add(name, enc);
-                    return enc;
-                }
-                catch
-                {
-                    return null;
-                }
+                var enc = new PersonaFont(Path.Combine(sourcedir, name + ".fnt"));
+                encodings.Add(name, enc);
+                return enc;
+            }
+            catch
+            {
+                return null;
             }
         }
 

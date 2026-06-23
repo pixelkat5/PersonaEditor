@@ -1,9 +1,12 @@
-﻿using PersonaEditorLib;
+using PersonaEditorLib;
 using AuxiliaryLibraries.WPF;
+using Microsoft.Win32;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -64,6 +67,8 @@ namespace PersonaEditor.ViewModels.Tools
         public SetCharVM()
         {
             Closing = new RelayCommand(Window_Closing);
+            ExportTsv = new RelayCommand(ExportTsvCommand);
+            ImportTsv = new RelayCommand(ImportTsvCommand);
             GlyphList.ListChanged += GlyphList_ListChanged;
         }
 
@@ -94,8 +99,8 @@ namespace PersonaEditor.ViewModels.Tools
                 }
             var enc = Static.EncodingManager.GetPersonaEncoding(Static.FontManager.GetPersonaFontName(_FontSelect));
             foreach (var a in GlyphList)
-                if (enc.Dictionary.ContainsKey(a.Index))
-                    a.Char = enc.Dictionary[a.Index].ToString();
+                if (enc.Dictionary.TryGetValue(a.Index, out var value))
+                    a.Char = value.ToString();
 
             GlyphList.ListChanged += GlyphList_ListChanged;
         }
@@ -131,11 +136,133 @@ namespace PersonaEditor.ViewModels.Tools
         }
 
         public ICommand Closing { get; }
+        public ICommand ExportTsv { get; }
+        public ICommand ImportTsv { get; }
 
         void Window_Closing(object arg)
         {
             if (!Save())
                 (arg as CancelEventArgs).Cancel = true;
+        }
+
+        private void ExportTsvCommand(object arg)
+        {
+            if (_FontSelect < 0)
+                return;
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "TSV files (*.tsv)|*.tsv|Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = Static.FontManager.GetPersonaFontName(_FontSelect) + ".tsv"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            File.WriteAllLines(dialog.FileName, BuildTsvLines(), new UTF8Encoding(false));
+        }
+
+        private string[] BuildTsvLines()
+        {
+            var glyphsByIndex = GlyphList.ToDictionary(x => x.Index);
+            int maxIndex = glyphsByIndex.Count == 0 ? 0 : glyphsByIndex.Keys.Max();
+            string[] lines = new string[(maxIndex / 16) + 1];
+
+            for (int row = 0; row < lines.Length; row++)
+            {
+                string[] columns = new string[16];
+                for (int column = 0; column < columns.Length; column++)
+                {
+                    int index = row * 16 + column;
+                    columns[column] = glyphsByIndex.TryGetValue(index, out var glyph) ? EscapeTsvChar(glyph.Char) : "\\u0000";
+                }
+                lines[row] = string.Join("\t", columns);
+            }
+
+            return lines;
+        }
+
+        private void ImportTsvCommand(object arg)
+        {
+            if (_FontSelect < 0)
+                return;
+
+            var dialog = new OpenFileDialog
+            {
+                Filter = "TSV files (*.tsv)|*.tsv|Text files (*.txt)|*.txt|All files (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            ImportTsvFile(dialog.FileName);
+        }
+
+        private void ImportTsvFile(string path)
+        {
+            var glyphsByIndex = GlyphList.ToDictionary(x => x.Index);
+            int imported = 0;
+
+            int row = 0;
+            foreach (string line in File.ReadLines(path, Encoding.UTF8))
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    row++;
+                    continue;
+                }
+
+                string[] columns = line.Split('\t');
+                for (int column = 0; column < columns.Length && column < 16; column++)
+                {
+                    int index = row * 16 + column;
+                    if (!glyphsByIndex.TryGetValue(index, out var glyph))
+                        continue;
+
+                    string value = UnescapeTsvChar(columns[column]);
+                    glyph.Char = value == "\0" ? "" : value;
+                    imported++;
+                }
+                row++;
+            }
+
+            if (imported > 0)
+                IsChanged = true;
+        }
+
+        private static string EscapeTsvChar(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "\\u0000";
+
+            char c = value[0];
+            if (c == '\\')
+                return "\\\\";
+            if (c == '\t')
+                return "\\u0009";
+            if (c == '\r')
+                return "\\u000D";
+            if (c == '\n')
+                return "\\u000A";
+            if (char.IsControl(c) || c == ' ')
+                return $"\\u{(int)c:X4}";
+
+            return c.ToString();
+        }
+
+        private static string UnescapeTsvChar(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "\0";
+
+            if (value == "\\\\")
+                return "\\";
+
+            if (value.Length == 6 && value.StartsWith("\\u", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(value.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int code))
+                return ((char)code).ToString();
+
+            return value.Substring(0, 1);
         }
     }
 }

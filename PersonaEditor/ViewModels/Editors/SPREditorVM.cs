@@ -36,6 +36,15 @@ namespace PersonaEditor.ViewModels.Editors
                 TextureList.Add(new SPRTextureVM(spr6.SubFiles[i], spr6.KeyList, i));
         }
 
+        public SPREditorVM(TPC tpc)
+        {
+            if (tpc == null)
+                throw new System.ArgumentNullException(nameof(tpc));
+
+            for (int i = 0; i < tpc.SubFiles.Count; i++)
+                TextureList.Add(new SPRTextureVM(tpc.SubFiles[i], tpc.KeyList, i));
+        }
+
         public bool Close()
         {
             return true;

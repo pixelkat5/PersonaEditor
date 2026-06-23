@@ -15,6 +15,7 @@ namespace PersonaEditorLib
         public string FilePath { get; } = "";
 
         public Dictionary<int, char> Dictionary { get; } = new Dictionary<int, char>();
+        private readonly Dictionary<char, int> indexByChar = new Dictionary<char, int>();
 
         public PersonaEncoding()
         {
@@ -33,10 +34,18 @@ namespace PersonaEditorLib
         {
             if (c != '\0')
             {
-                if (Dictionary.ContainsKey(index))
+                if (Dictionary.TryGetValue(index, out char oldChar))
+                {
                     Dictionary[index] = c;
+                    if (oldChar != c)
+                        RebuildReverseLookup();
+                }
                 else
+                {
                     Dictionary.Add(index, c);
+                    if (!indexByChar.ContainsKey(c))
+                        indexByChar.Add(c, index);
+                }
             }
         }
 
@@ -82,10 +91,15 @@ namespace PersonaEditorLib
 
         public int GetIndex(char c)
         {
-            if (Dictionary.ContainsValue(c))
-                return Dictionary.First(x => x.Value.Equals(c)).Key;
-            else
-                return -1;
+            return indexByChar.TryGetValue(c, out int index) ? index : -1;
+        }
+
+        private void RebuildReverseLookup()
+        {
+            indexByChar.Clear();
+            foreach (var item in Dictionary)
+                if (!indexByChar.ContainsKey(item.Value))
+                    indexByChar.Add(item.Value, item.Key);
         }
 
         #region Encoding

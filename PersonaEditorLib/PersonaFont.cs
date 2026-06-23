@@ -194,8 +194,7 @@ namespace PersonaEditorLib
                 writer.BaseStream.Position += IOTools.Alignment(writer.BaseStream.Position, 0x10);
                 foreach (var a in CutList)
                 {
-                    writer.Write(a.Value.Left);
-                    writer.Write(a.Value.Right);
+                    writer.Write(a.Value.Get());
                 }
 
                 writer.BaseStream.Position += IOTools.Alignment(writer.BaseStream.Position, 0x10);

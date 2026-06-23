@@ -321,9 +321,9 @@ namespace PersonaEditorLib.Text
         {
             long temp = reader.BaseStream.Position;
             reader.BaseStream.Position = 0;
-            byte[] buffer = reader.ReadBytes(4);
+            int magic = reader.ReadInt32();
             reader.BaseStream.Position = temp;
-            if (buffer.SequenceEqual(new byte[4] { 0x50, 0x54, 0x50, 0x30 }))
+            if (magic == 0x30505450)
                 return 0;
             else
                 return -1;
@@ -444,7 +444,42 @@ namespace PersonaEditorLib.Text
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            int size = 20;
+            size += IOTools.Alignment(size, 0x10);
+
+            foreach (var a in Msg)
+            {
+                size += 32;
+                foreach (var b in a.Strings)
+                {
+                    int length = b.Prefix.GetByteArray().Length;
+                    size += 4 + length + IOTools.Alignment(size + 4 + length, 4);
+
+                    length = b.OldString.GetByteArray().Length;
+                    size += 4 + length + IOTools.Alignment(size + 4 + length, 4);
+
+                    length = b.Postfix.GetByteArray().Length;
+                    size += 4 + length + IOTools.Alignment(size + 4 + length, 4);
+
+                    length = Encoding.UTF8.GetByteCount(b.NewString);
+                    size += 4 + length + IOTools.Alignment(size + 4 + length, 16);
+                }
+                size += IOTools.Alignment(size, 0x10);
+            }
+
+            foreach (var a in Names)
+            {
+                int length = a.OldName.Length;
+                size += 4 + length + IOTools.Alignment(size + 4 + length, 4);
+
+                length = Encoding.UTF8.GetByteCount(a.NewName);
+                size += 4 + length + IOTools.Alignment(size + 4 + length, 4);
+            }
+
+            return size;
+        }
 
         public byte[] GetData()
         {

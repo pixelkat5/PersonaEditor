@@ -633,7 +633,14 @@ namespace PersonaEditorLib.FileContainer
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
-        public int GetSize() => GetData().Length;
+        public int GetSize()
+        {
+            using (var stream = new CountingStream())
+            {
+                Write(stream);
+                return checked((int)stream.Length);
+            }
+        }
 
         public byte[] GetData()
         {
@@ -646,5 +653,66 @@ namespace PersonaEditorLib.FileContainer
         }
 
         #endregion IFile
+
+        private sealed class CountingStream : Stream
+        {
+            private long position;
+            private long length;
+
+            public override bool CanRead => false;
+            public override bool CanSeek => true;
+            public override bool CanWrite => true;
+            public override long Length => length;
+            public override long Position
+            {
+                get => position;
+                set => position = value;
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                position = origin switch
+                {
+                    SeekOrigin.Begin => offset,
+                    SeekOrigin.Current => position + offset,
+                    SeekOrigin.End => length + offset,
+                    _ => position
+                };
+                return position;
+            }
+
+            public override void SetLength(long value)
+            {
+                length = value;
+                if (position > length)
+                    position = length;
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                Advance(count);
+            }
+
+            public override void Write(ReadOnlySpan<byte> buffer)
+            {
+                Advance(buffer.Length);
+            }
+
+            private void Advance(int count)
+            {
+                position += count;
+                if (position > length)
+                    length = position;
+            }
+        }
     }
 }

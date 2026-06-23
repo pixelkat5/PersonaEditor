@@ -133,15 +133,16 @@ namespace PersonaEditor.ViewModels.Editors
 
             var pallete = new BitmapPalette(fnt.Palette.GetImagePalette().Select(x => Color.FromArgb(x.A, x.R, x.G, x.B)).ToArray());
 
-            if (GlyphList.Count <= CutList.Count)
+            int count = Math.Min(GlyphList.Count, CutList.Count);
+            if (count > 0)
             {
-                for (int i = 0; i < GlyphList.Count; i++)
+                for (int i = 0; i < count; i++)
                 {
                     var image = BitmapSource.Create(fnt.Header.Glyphs.Size1,
                         fnt.Header.Glyphs.Size2,
                         96, 96, pixelFormat, pallete,
                         GlyphList[i],
-                        (pixelFormat.BitsPerPixel * fnt.Header.Glyphs.Size2 + 7) / 8);
+                        (pixelFormat.BitsPerPixel * fnt.Header.Glyphs.Size1 + 7) / 8);
                     image.Freeze();
                     GlyphCuts.Add(new GlyphCut(image, CutList[i], i));
                 }

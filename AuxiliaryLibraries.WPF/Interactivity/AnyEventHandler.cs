@@ -89,7 +89,9 @@ namespace AuxiliaryLibraries.WPF.Interactivity
 
                     if (GCHandle.FromIntPtr(new IntPtr(ptr)).Target is Action<object[]> handle)
                     {
-                        handle(objArr.Skip(1).ToArray());
+                        object[] argsOnly = new object[objArr.Length - 1];
+                        Array.Copy(objArr, 1, argsOnly, 0, argsOnly.Length);
+                        handle(argsOnly);
                     }
                 }
             }
@@ -107,9 +109,13 @@ namespace AuxiliaryLibraries.WPF.Interactivity
 
         void Dispose(bool disposing)
         {
-            if (disposed)
+            if (!disposed)
             {
-                eventInfo.RemoveEventHandler(source, dynamicMethodDelegate);
+                if (eventInfo != null && dynamicMethodDelegate != null && source != null)
+                {
+                    eventInfo.RemoveEventHandler(source, dynamicMethodDelegate);
+                }
+
                 if (GCHandle.IsAllocated)
                     GCHandle.Free();
 

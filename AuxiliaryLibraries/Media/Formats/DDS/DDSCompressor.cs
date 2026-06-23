@@ -1,5 +1,6 @@
 ﻿using AuxiliaryLibraries.Mathematic;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Text;
 
@@ -88,8 +89,8 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                     ColorA = temp;
                 }
 
-                Buffer.BlockCopy(BitConverter.GetBytes(ColorA), 0, data, dataIndex, 2);
-                Buffer.BlockCopy(BitConverter.GetBytes(ColorB), 0, data, dataIndex + 2, 2);
+                BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(dataIndex, 2), ColorA);
+                BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(dataIndex + 2, 2), ColorB);
 
                 int[,] bitPixel = new int[4, 4];
 
@@ -163,8 +164,8 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                     palette[3][2] = Convert.ToByte((palette[0][2] + 2 * palette[1][2]) / 3);
                 }
 
-                Buffer.BlockCopy(BitConverter.GetBytes(RGB565ArrayToRGB565(palette[0])), 0, data, dataIndex, 2);
-                Buffer.BlockCopy(BitConverter.GetBytes(RGB565ArrayToRGB565(palette[1])), 0, data, dataIndex + 2, 2);
+                BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(dataIndex, 2), RGB565ArrayToRGB565(palette[0]));
+                BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(dataIndex + 2, 2), RGB565ArrayToRGB565(palette[1]));
 
                 int[,] bitPixel = CreateIndexies(palette, texel, alphaIgnore);
                 IndexTo2Bit(bitPixel, data, dataIndex + 4);
@@ -239,7 +240,7 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
             {
                 byte[] alphaPalette = new byte[] { min, max };
                 Buffer.BlockCopy(alphaPalette, 0, data, dataIndex, 2);
-                Buffer.BlockCopy(CreateBC3AlphaData(alphaPalette, alpha), 0, data, dataIndex + 2, 6);
+                WriteBC3AlphaData(alphaPalette, alpha, data, dataIndex + 2);
             }
             else
             {
@@ -268,11 +269,11 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                 }
 
                 Buffer.BlockCopy(alphaPalette, 0, data, dataIndex, 2);
-                Buffer.BlockCopy(CreateBC3AlphaData(alphaPalette, alpha), 0, data, dataIndex + 2, 6);
+                WriteBC3AlphaData(alphaPalette, alpha, data, dataIndex + 2);
             }
         }
 
-        private static byte[] CreateBC3AlphaData(byte[] palette, byte[] alhpadata)
+        private static void WriteBC3AlphaData(byte[] palette, byte[] alhpadata, byte[] data, int offset)
         {
             ulong returned = 0;
 
@@ -293,7 +294,9 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                 returned += (ulong)index << (3 * i);
             }
 
-            return BitConverter.GetBytes(returned);
+            Span<byte> alphaData = stackalloc byte[8];
+            BinaryPrimitives.WriteUInt64LittleEndian(alphaData, returned);
+            alphaData[..6].CopyTo(data.AsSpan(offset, 6));
         }
 
         private static int[,] CreateIndexies(byte[][] palette, byte[,][] texel, bool alphaIgnore)
@@ -448,7 +451,7 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                 for (int k = 0; k < 4; k++)
                     bits += ((ulong)indexes[i, k] & 3) << (2 * (i * 4 + k));
 
-            Buffer.BlockCopy(BitConverter.GetBytes(bits), 0, data, offset, 4);
+            BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(offset, 4), (uint)bits);
         }
     }
 }

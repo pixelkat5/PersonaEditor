@@ -30,6 +30,9 @@ namespace PersonaEditor.Classes
             if (gameFile == null)
                 throw new System.ArgumentNullException(nameof(gameFile));
 
+            if (gameFile.GameData is PersonaEditorLib.SpriteContainer.TPC tpc)
+                return tpc.HasSpriteInfo;
+
             return contextMenuItemsEdited.Contains(gameFile.GameData.Type);
         }
 

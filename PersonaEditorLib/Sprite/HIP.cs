@@ -50,7 +50,7 @@ namespace PersonaEditorLib.Sprite
 
         public FormatEnum Type => FormatEnum.HIP;
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
-        public int GetSize() => GetData().Length;
+        public int GetSize() => !dirty && originalData != null ? originalData.Length : GetData().Length;
         public Bitmap GetBitmap() => bitmap;
 
         public void SetBitmap(Bitmap bitmap)
@@ -235,15 +235,17 @@ namespace PersonaEditorLib.Sprite
             byte[] pixels = new byte[expected];
             int index = 0;
             bool repeat = encoding == EncodingRawRepeat;
+            Span<byte> color = stackalloc byte[4];
 
             while (index < pixels.Length && stream.Position < stream.Length)
             {
-                byte[] color = ReadExact(stream, BytesPerPixel);
+                if (!TryReadExact(stream, color.Slice(0, BytesPerPixel)))
+                    break;
                 int repeatCount = repeat && stream.Position < stream.Length ? stream.ReadByte() : 1;
                 for (int i = 0; i < repeatCount && index < pixels.Length; i++)
                 {
-                    Buffer.BlockCopy(color, 0, pixels, index, color.Length);
-                    index += color.Length;
+                    color.Slice(0, Math.Min(BytesPerPixel, pixels.Length - index)).CopyTo(pixels.AsSpan(index));
+                    index += BytesPerPixel;
                 }
             }
 
@@ -256,11 +258,11 @@ namespace PersonaEditorLib.Sprite
             int key = stream.ReadByte();
             stream.ReadByte();
             int pos = 0;
+            Span<byte> bytes = stackalloc byte[4];
 
             while (pos < pixels.Length && stream.Position < stream.Length)
             {
-                byte[] bytes = ReadExact(stream, BytesPerPixel);
-                if (bytes.Length < BytesPerPixel)
+                if (!TryReadExact(stream, bytes.Slice(0, BytesPerPixel)))
                     break;
 
                 if (bytes[0] == key && bytes.Length >= 3)
@@ -284,13 +286,14 @@ namespace PersonaEditorLib.Sprite
                     else
                     {
                         stream.Position = Math.Max(0, stream.Position - 3);
-                        bytes = ReadExact(stream, BytesPerPixel);
-                        CopyEndianAware(bytes, pixels, ref pos);
+                        if (!TryReadExact(stream, bytes.Slice(0, BytesPerPixel)))
+                            break;
+                        CopyEndianAware(bytes.Slice(0, BytesPerPixel), pixels, ref pos);
                     }
                 }
                 else
                 {
-                    CopyEndianAware(bytes, pixels, ref pos);
+                    CopyEndianAware(bytes.Slice(0, BytesPerPixel), pixels, ref pos);
                 }
             }
 
@@ -301,25 +304,30 @@ namespace PersonaEditorLib.Sprite
         {
             byte[] pixels = new byte[expected];
             int pos = 0;
+            Span<byte> valBytes = stackalloc byte[4];
+            Span<byte> color = stackalloc byte[4];
 
             while (pos < pixels.Length && stream.Position + 4 <= stream.Length)
             {
-                byte[] valBytes = ReadExact(stream, 4);
+                if (!TryReadExact(stream, valBytes))
+                    break;
                 int value = bigEndian ? BinaryPrimitives.ReadInt32BigEndian(valBytes) : BinaryPrimitives.ReadInt32LittleEndian(valBytes);
                 if (value < 0)
                 {
                     value &= 0x7FFFFFFF;
                     for (int i = 0; i < value && pos < pixels.Length; i++)
                     {
-                        byte[] color = ReadExact(stream, BytesPerPixel);
-                        CopyEndianAware(color, pixels, ref pos);
+                        if (!TryReadExact(stream, color.Slice(0, BytesPerPixel)))
+                            break;
+                        CopyEndianAware(color.Slice(0, BytesPerPixel), pixels, ref pos);
                     }
                 }
                 else
                 {
-                    byte[] color = ReadExact(stream, BytesPerPixel);
+                    if (!TryReadExact(stream, color.Slice(0, BytesPerPixel)))
+                        break;
                     for (int i = 0; i < value && pos < pixels.Length; i++)
-                        CopyEndianAware(color, pixels, ref pos);
+                        CopyEndianAware(color.Slice(0, BytesPerPixel), pixels, ref pos);
                 }
             }
 
@@ -478,11 +486,18 @@ namespace PersonaEditorLib.Sprite
             return output;
         }
 
-        private void CopyEndianAware(byte[] bytes, byte[] pixels, ref int pos)
+        private void CopyEndianAware(ReadOnlySpan<byte> bytes, byte[] pixels, ref int pos)
         {
+            int count = Math.Min(bytes.Length, pixels.Length - pos);
             if (bigEndian && bytes.Length > 1)
-                Array.Reverse(bytes);
-            Buffer.BlockCopy(bytes, 0, pixels, pos, Math.Min(bytes.Length, pixels.Length - pos));
+            {
+                for (int i = 0; i < count; i++)
+                    pixels[pos + i] = bytes[bytes.Length - 1 - i];
+            }
+            else
+            {
+                bytes.Slice(0, count).CopyTo(pixels.AsSpan(pos));
+            }
             pos += bytes.Length;
         }
 
@@ -551,13 +566,16 @@ namespace PersonaEditorLib.Sprite
             writer.Write(buffer);
         }
 
-        private static byte[] ReadExact(Stream stream, int count)
+        private static bool TryReadExact(Stream stream, Span<byte> buffer)
         {
-            byte[] buffer = new byte[count];
-            int read = stream.Read(buffer, 0, count);
-            if (read != count)
-                Array.Resize(ref buffer, read);
-            return buffer;
+            while (!buffer.IsEmpty)
+            {
+                int read = stream.Read(buffer);
+                if (read == 0)
+                    return false;
+                buffer = buffer.Slice(read);
+            }
+            return true;
         }
 
         private static byte Expand5(int value) => (byte)((value << 3) | (value >> 2));

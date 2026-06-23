@@ -1,5 +1,6 @@
 ﻿using AuxiliaryLibraries.Extensions;
 using PersonaEditorLib.Other;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,6 +29,7 @@ namespace PersonaEditorLib
             { ".pm1", FormatEnum.PM1 },
             { ".bvp", FormatEnum.BVP },
             { ".tbl", FormatEnum.TBL },
+            { ".lb", FormatEnum.LB },
 
             { ".ctd", FormatEnum.FTD },
             { ".ftd", FormatEnum.FTD },
@@ -40,6 +42,7 @@ namespace PersonaEditorLib
             { ".g1t", FormatEnum.G1T },
             { ".file", FormatEnum.G1T },
             { ".tpc", FormatEnum.TPC },
+            { ".cmp", FormatEnum.CMP },
             { ".spd", FormatEnum.SPD },
 
             //Graphic
@@ -91,6 +94,8 @@ namespace PersonaEditorLib
                     Obj = new SpriteContainer.G1T(data);
                 else if (type == FormatEnum.TPC)
                     Obj = new SpriteContainer.TPC(data);
+                else if (type == FormatEnum.CMP)
+                    Obj = new Sprite.DMPBM(data);
                 else if (type == FormatEnum.TMX)
                     Obj = new Sprite.TMX(data);
                 else if (type == FormatEnum.BF)
@@ -118,6 +123,8 @@ namespace PersonaEditorLib
                     {
                         Obj = new FileContainer.BIN(data);
                     }
+                else if (type == FormatEnum.LB)
+                    Obj = new FileContainer.LB(data);
                 else if (type == FormatEnum.FTD)
                     Obj = new FTD(data);
                 else if (type == FormatEnum.DDS)
@@ -155,6 +162,15 @@ namespace PersonaEditorLib
             return OpenFile(name, data, format);
         }
 
+        public static GameFile OpenFile(string path)
+        {
+            var file = OpenFile(Path.GetFileName(path), File.ReadAllBytes(path));
+            if (file?.GameData is SpriteContainer.TPC tpc)
+                tpc.LoadGtxSidecar(Path.ChangeExtension(path, ".gtx"));
+
+            return file;
+        }
+
         public static FormatEnum GetFormat(string name)
         {
             string ext = Path.GetExtension(name).ToLower().TrimEnd(' ');
@@ -168,42 +184,48 @@ namespace PersonaEditorLib
         {
             if (data.Length >= 0xc)
             {
-                byte[] buffer = data.SubArray(0, 4);
-                if (buffer.SequenceEqual(new byte[] { 0x46, 0x4E, 0x54, 0x30 }))
+                ReadOnlySpan<byte> header = data;
+                if (HasMagic(header, 0, 0x46, 0x4E, 0x54, 0x30))
                     return FormatEnum.FNT0;
-                else if (buffer.SequenceEqual(new byte[] { 0x41, 0x54, 0x46, 0x00 }))
+                else if (HasMagic(header, 0, 0x41, 0x54, 0x46, 0x00))
                     return FormatEnum.ATF;
 
-                buffer = data.SubArray(8, 4);
-                if (buffer.SequenceEqual(new byte[] { 0x31, 0x47, 0x53, 0x4D }) | buffer.SequenceEqual(new byte[] { 0x4D, 0x53, 0x47, 0x31 }))
+                if (HasMagic(header, 8, 0x31, 0x47, 0x53, 0x4D) || HasMagic(header, 8, 0x4D, 0x53, 0x47, 0x31))
                     return FormatEnum.BMD;
-                else if (buffer.SequenceEqual(new byte[] { 0x54, 0x4D, 0x58, 0x30 }))
+                else if (HasMagic(header, 8, 0x54, 0x4D, 0x58, 0x30))
                     return FormatEnum.TMX;
-                else if (buffer.SequenceEqual(new byte[] { 0x53, 0x50, 0x52, 0x33 }))
+                else if (HasMagic(header, 8, 0x53, 0x50, 0x52, 0x33))
                     return FormatEnum.SPR3;
-                else if (buffer.SequenceEqual(new byte[] { 0x53, 0x50, 0x52, 0x30 }))
+                else if (HasMagic(header, 8, 0x53, 0x50, 0x52, 0x30))
                     return FormatEnum.SPR;
-                else if (buffer.SequenceEqual(new byte[] { 0x46, 0x4C, 0x57, 0x30 }))
+                else if (HasMagic(header, 8, 0x46, 0x4C, 0x57, 0x30))
                     return FormatEnum.BF;
-                else if (buffer.SequenceEqual(new byte[] { 0x50, 0x4D, 0x44, 0x31 }))
+                else if (HasMagic(header, 8, 0x50, 0x4D, 0x44, 0x31))
                     return FormatEnum.PM1;
             }
 
             if (data.Length >= 4)
             {
-                var buffer = data.SubArray(0, 4);
-                if (buffer.SequenceEqual(new byte[] { 0x46, 0x50, 0x41, 0x43 }))
+                ReadOnlySpan<byte> header = data;
+                if (HasMagic(header, 0, 0x46, 0x50, 0x41, 0x43))
                     return FormatEnum.PAC;
-                else if (buffer.SequenceEqual(new byte[] { 0x43, 0x54, 0x50, 0x4B }))
+                else if (HasMagic(header, 0, 0x43, 0x54, 0x50, 0x4B))
                     return FormatEnum.CTPK;
-                else if (buffer.SequenceEqual(new byte[] { 0x53, 0x50, 0x52, 0x36 }))
+                else if (HasMagic(header, 0, 0x53, 0x50, 0x52, 0x36))
                     return FormatEnum.SPR6;
-                else if (buffer.SequenceEqual(new byte[] { 0x47, 0x54, 0x31, 0x47 }))
+                else if (HasMagic(header, 0, 0x47, 0x54, 0x31, 0x47))
                     return FormatEnum.G1T;
-                else if (buffer.SequenceEqual(new byte[] { 0x48, 0x49, 0x50, 0x00 }))
+                else if (HasMagic(header, 0, 0x48, 0x49, 0x50, 0x00))
                     return FormatEnum.HIP;
             }
             return FormatEnum.Unknown;
         }
+
+        private static bool HasMagic(ReadOnlySpan<byte> data, int offset, byte a, byte b, byte c, byte d)
+            => data.Length >= offset + 4
+                && data[offset] == a
+                && data[offset + 1] == b
+                && data[offset + 2] == c
+                && data[offset + 3] == d;
     }
 }

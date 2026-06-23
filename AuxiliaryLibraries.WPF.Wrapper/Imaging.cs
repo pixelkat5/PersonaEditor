@@ -32,26 +32,17 @@ namespace AuxiliaryLibraries.WPF.Wrapper
 
         public static PixelFormat AuxToWPF(AuxiliaryLibraries.Media.PixelFormat pixelFormat)
         {
-            if (AuxToWPFdic.ContainsKey(pixelFormat))
-                return AuxToWPFdic[pixelFormat];
-            else
-                return PixelFormats.Default;
+            return AuxToWPFdic.TryGetValue(pixelFormat, out var value) ? value : PixelFormats.Default;
         }
 
         public static AuxiliaryLibraries.Media.PixelFormat AuxToWPFComp(AuxiliaryLibraries.Media.PixelFormat pixelFormat)
         {
-            if (AuxToWPFCompdic.ContainsKey(pixelFormat))
-                return AuxToWPFCompdic[pixelFormat];
-            else
-                return AuxiliaryLibraries.Media.PixelFormats.Undefined;
+            return AuxToWPFCompdic.TryGetValue(pixelFormat, out var value) ? value : AuxiliaryLibraries.Media.PixelFormats.Undefined;
         }
 
         public static AuxiliaryLibraries.Media.PixelFormat WPFToAux(PixelFormat pixelFormat)
         {
-            if (WPFToAuxdic.ContainsKey(pixelFormat))
-                return WPFToAuxdic[pixelFormat];
-            else
-                return AuxiliaryLibraries.Media.PixelFormats.Undefined;
+            return WPFToAuxdic.TryGetValue(pixelFormat, out var value) ? value : AuxiliaryLibraries.Media.PixelFormats.Undefined;
         }
 
         public static BitmapSource GetBitmapSource(this AuxiliaryLibraries.Media.Bitmap bitmap)

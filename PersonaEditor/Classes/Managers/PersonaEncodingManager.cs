@@ -48,15 +48,13 @@ namespace PersonaEditor.Classes.Managers
 
         public PersonaEncoding GetPersonaEncoding(string name)
         {
-            if (encodings.ContainsKey(name))
-                return encodings[name];
-            else
-            {
-                var mapPath = Path.Combine(sourcedir, name + ".fntmap");
-                var enc = new PersonaEncoding(mapPath);
-                encodings.Add(name, enc);
-                return enc;
-            }
+            if (encodings.TryGetValue(name, out var encoding))
+                return encoding;
+
+            var mapPath = Path.Combine(sourcedir, name + ".fntmap");
+            var enc = new PersonaEncoding(mapPath);
+            encodings.Add(name, enc);
+            return enc;
         }
 
         public void Reload(string name)

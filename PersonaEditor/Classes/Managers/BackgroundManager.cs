@@ -47,21 +47,19 @@ namespace PersonaEditor.Classes.Managers
 
         public Background GetBackground(string name)
         {
-            if (backgrounds.ContainsKey(name))
-                return backgrounds[name];
-            else
+            if (backgrounds.TryGetValue(name, out var background))
+                return background;
+
+            try
             {
-                try
-                {
-                    var bckg = new Background(Path.Combine(sourcedir, name + ".png"), Path.Combine(sourcedir, name + ".xml"));
-                    backgrounds.Add(name, bckg);
-                    return bckg;
-                }
-                catch
-                {
-                    backgrounds.Add(name, null);
-                    return null;
-                }
+                var bckg = new Background(Path.Combine(sourcedir, name + ".png"), Path.Combine(sourcedir, name + ".xml"));
+                backgrounds.Add(name, bckg);
+                return bckg;
+            }
+            catch
+            {
+                backgrounds.Add(name, null);
+                return null;
             }
         }
 

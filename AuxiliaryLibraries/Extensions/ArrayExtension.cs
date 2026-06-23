@@ -15,14 +15,14 @@ namespace AuxiliaryLibraries.Extensions
         public static T[,] Copy<T>(this T[] array, int firstDimension)
         {
             T[,] returned = new T[firstDimension, (array.Length + firstDimension - 1) / firstDimension];
-            Buffer.BlockCopy(array, 0, returned, 0, array.Length);
+            Array.Copy(array, returned, array.Length);
             return returned;
         }
 
         public static T[] Copy<T>(this T[,] array)
         {
             T[] returned = new T[array.Length];
-            Buffer.BlockCopy(array, 0, returned, 0, array.Length);
+            Array.Copy(array, returned, array.Length);
             return returned;
         }
 
