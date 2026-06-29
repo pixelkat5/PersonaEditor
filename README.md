@@ -16,14 +16,16 @@
 * Graphic containers: SPR3; TPC;
 * Graphics: CTPK;
 
-### Persona 3/5 Dancing
+### Persona 3/4/5 Dancing
 
-* Graphic containers: SPR6;
+* Graphic containers: SPR6; SPR4;
+* Graphics: GNF;
 
 ### Persona 4 Arena
 
 * Containers: FPAC (.pac, .paccs, .pacgz, .fontpac);
 * Graphics: HIP;
+* Fonts: ABC, support have quite some problems. (Do not open ABC directly, open the correspondent HIP file and then Right Click + View/Edit)
 * Text: ATF;
 
 ### Persona 5 Strikers

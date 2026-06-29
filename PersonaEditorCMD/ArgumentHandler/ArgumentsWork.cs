@@ -15,6 +15,8 @@ namespace PersonaEditorCMD.ArgumentHandler
 
         public string OpenedArgument { get; } = "";
 
+        public bool IsDirectory { get; } = false;
+
         public ArgumentsWork(string[] args)
         {
             var split = args.SplitInclude(x => x.StartsWith("-"), true).ToArray();
@@ -23,6 +25,15 @@ namespace PersonaEditorCMD.ArgumentHandler
             {
                 OpenedFile = Path.GetFullPath(args[0]);
                 OpenedFileDir = Path.GetDirectoryName(OpenedFile);
+
+                if (split[0].Length > 1)
+                    OpenedArgument = split[0][1];
+            }
+            else if (Directory.Exists(split[0][0]))
+            {
+                OpenedFile = Path.GetFullPath(args[0]);
+                OpenedFileDir = OpenedFile;
+                IsDirectory = true;
 
                 if (split[0].Length > 1)
                     OpenedArgument = split[0][1];

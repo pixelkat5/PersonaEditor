@@ -17,6 +17,7 @@ namespace PersonaEditorLib.FileContainer
         int[][] Table;
         int[] Sizes;
         byte[] Unknown;
+        byte[] ExtraData = Array.Empty<byte>();
         int endIndex = -1;
 
         public BF(string path)
@@ -67,6 +68,7 @@ namespace PersonaEditorLib.FileContainer
 
             stream.Position = 0x4;
             int fileSize = reader.ReadInt32();
+
             stream.Position = 0x10;
             int tablecount = reader.ReadInt32();
             Unknown = reader.ReadBytes(12);
@@ -78,10 +80,13 @@ namespace PersonaEditorLib.FileContainer
             for (int i = 0; i < Table.Length; i++)
                 Sizes[i] = Table[i][1];
 
+            int dataEnd = fileSize;
             foreach (var element in Table)
                 if (element[1] * element[2] > 0)
                 {
                     reader.BaseStream.Position = element[3];
+                    int dataSize = element[1] * element[2];
+                    dataEnd = Math.Max(dataEnd, element[3] + dataSize);
 
                     string tempN;
 
@@ -94,7 +99,7 @@ namespace PersonaEditorLib.FileContainer
                     if (fileSize == element[3] + element[1] * element[2])
                         endIndex = element[0];
 
-                    byte[] data = reader.ReadBytes(element[1] * element[2]);
+                    byte[] data = reader.ReadBytes(dataSize);
 
                     var item = GameFormatHelper.OpenFile(tempN, data, type);
                     if (item == null)
@@ -105,8 +110,46 @@ namespace PersonaEditorLib.FileContainer
                     SubFiles.Add(item);
                 }
 
+            if (dataEnd >= 0 && dataEnd < stream.Length)
+            {
+                int extraStart = dataEnd;
+                int postLogicalDataSize = dataEnd - fileSize;
+                while (postLogicalDataSize > 0
+                    && extraStart + postLogicalDataSize <= stream.Length
+                    && RangesEqual(stream, fileSize, extraStart, postLogicalDataSize))
+                {
+                    extraStart += postLogicalDataSize;
+                }
+
+                stream.Position = extraStart;
+                ExtraData = reader.ReadBytes((int)(stream.Length - extraStart));
+            }
+
             if (endIndex == -1)
                 throw new Exception("BF: endIndex");
+        }
+
+        private static bool RangesEqual(Stream stream, long firstOffset, long secondOffset, int count)
+        {
+            long savedPosition = stream.Position;
+            try
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    stream.Position = firstOffset + i;
+                    int first = stream.ReadByte();
+                    stream.Position = secondOffset + i;
+                    int second = stream.ReadByte();
+                    if (first != second)
+                        return false;
+                }
+
+                return true;
+            }
+            finally
+            {
+                stream.Position = savedPosition;
+            }
         }
 
         public bool IsLittleEndian { get; set; } = true;
@@ -147,6 +190,7 @@ namespace PersonaEditorLib.FileContainer
 
             returned += 0x20 + 0x10 * Table.Length;
             SubFiles.ForEach(x => returned += x.GameData.GetSize());
+            returned += ExtraData.Length;
 
             return returned;
         }
@@ -161,7 +205,7 @@ namespace PersonaEditorLib.FileContainer
 
                 writer.Write(0);
 
-                int tempSize = GetSize();
+                int tempSize = GetSize() - ExtraData.Length;
                 var temp = SubFiles.FindAll(x => (int)x.Tag > endIndex);
                 foreach (var a in temp)
                     tempSize -= a.GameData.GetSize();
@@ -177,6 +221,7 @@ namespace PersonaEditorLib.FileContainer
                     writer.WriteInt32Array(line);
 
                 SubFiles.ForEach(x => writer.Write(x.GameData.GetData()));
+                writer.Write(ExtraData);
 
                 returned = MS.ToArray();
             }

@@ -66,8 +66,12 @@ namespace PersonaEditorCMD.ArgumentHandler
                 return FormatEnum.SPR3;
             else if (type == "spr6")
                 return FormatEnum.SPR6;
+            else if (type == "spr4")
+                return FormatEnum.SPR4;
             else if (type == "g1t")
                 return FormatEnum.G1T;
+            else if (type == "gnf")
+                return FormatEnum.GNF;
             else if (type == "tpc")
                 return FormatEnum.TPC;
             else if (type == "tmx")

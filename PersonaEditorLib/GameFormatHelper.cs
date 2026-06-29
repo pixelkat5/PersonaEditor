@@ -39,7 +39,9 @@ namespace PersonaEditorLib
             { ".spr", FormatEnum.SPR },
             { ".spr3", FormatEnum.SPR3 },
             { ".spr6", FormatEnum.SPR6 },
+            { ".spr4", FormatEnum.SPR4 },
             { ".g1t", FormatEnum.G1T },
+            { ".gnf", FormatEnum.GNF },
             { ".file", FormatEnum.G1T },
             { ".tpc", FormatEnum.TPC },
             { ".cmp", FormatEnum.CMP },
@@ -88,10 +90,12 @@ namespace PersonaEditorLib
                     Obj = new SpriteContainer.SPR(data);
                 else if (type == FormatEnum.SPR3)
                     Obj = new SpriteContainer.SPR3(data);
-                else if (type == FormatEnum.SPR6)
-                    Obj = new SpriteContainer.SPR6(data);
+                else if (type == FormatEnum.SPR6 || type == FormatEnum.SPR4)
+                    Obj = new SpriteContainer.SPR6(data, type);
                 else if (type == FormatEnum.G1T)
                     Obj = new SpriteContainer.G1T(data);
+                else if (type == FormatEnum.GNF)
+                    Obj = new Sprite.GNF(data);
                 else if (type == FormatEnum.TPC)
                     Obj = new SpriteContainer.TPC(data);
                 else if (type == FormatEnum.CMP)
@@ -155,9 +159,10 @@ namespace PersonaEditorLib
 
         public static GameFile OpenFile(string name, byte[] data)
         {
-            var format = GetFormat(data);
+            var nameFormat = GetFormat(name);
+            var format = nameFormat == FormatEnum.SPR4 ? nameFormat : GetFormat(data);
             if (format == FormatEnum.Unknown)
-                format = GetFormat(name);
+                format = nameFormat;
 
             return OpenFile(name, data, format);
         }
@@ -167,6 +172,8 @@ namespace PersonaEditorLib
             var file = OpenFile(Path.GetFileName(path), File.ReadAllBytes(path));
             if (file?.GameData is SpriteContainer.TPC tpc)
                 tpc.LoadGtxSidecar(Path.ChangeExtension(path, ".gtx"));
+            else if (file?.GameData is Sprite.HIP hip)
+                hip.LoadAbcSidecar(Path.ChangeExtension(path, ".abc"));
 
             return file;
         }
@@ -215,6 +222,8 @@ namespace PersonaEditorLib
                     return FormatEnum.SPR6;
                 else if (HasMagic(header, 0, 0x47, 0x54, 0x31, 0x47))
                     return FormatEnum.G1T;
+                else if (HasMagic(header, 0, 0x47, 0x4E, 0x46, 0x20))
+                    return FormatEnum.GNF;
                 else if (HasMagic(header, 0, 0x48, 0x49, 0x50, 0x00))
                     return FormatEnum.HIP;
             }

@@ -14,6 +14,8 @@ namespace PersonaEditorCMD
 {
     class Program
     {
+        private static readonly Dictionary<string, List<string[]>> TextImportCache = new Dictionary<string, List<string[]>>();
+
         static Program()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -117,49 +119,99 @@ namespace PersonaEditorCMD
         static void DoSome(string[] args)
         {
             ArgumentsWork argwrk = new ArgumentsWork(args);
-            if (argwrk.OpenedFile != "")
+            if (argwrk.OpenedFile == "")
+                return;
+
+            if (argwrk.IsDirectory)
             {
-                GameFile file = GameFormatHelper.OpenFile(Path.GetFileName(argwrk.OpenedFile), File.ReadAllBytes(argwrk.OpenedFile));
-
-                if (file != null)
-                    foreach (var command in argwrk.ArgumentList)
-                    {
-                        Action<GameFile, string, string, Parameters> action = null;
-                        if (command.Command == CommandType.Export)
-                        {
-                            if (command.Type == CommandSubType.Image)
-                                action = ExportImage;
-                            else if (command.Type == CommandSubType.Table)
-                                action = ExportTable;
-                            else if (command.Type == CommandSubType.All)
-                                ExportAll(file, argwrk.OpenedFileDir);
-                            else if (command.Type == CommandSubType.PTP)
-                                action = ExportPTP;
-                            else if (command.Type == CommandSubType.Text)
-                                action = ExportText;
-                            else
-                                action = ExportByType;
-                        }
-                        else if (command.Command == CommandType.Import)
-                        {
-                            if (command.Type == CommandSubType.Image)
-                                action = ImportImage;
-                            else if (command.Type == CommandSubType.Table)
-                                action = ImportTable;
-                            else if (command.Type == CommandSubType.All)
-                                ImportAll(file, argwrk.OpenedFileDir);
-                            else if (command.Type == CommandSubType.PTP)
-                                action = ImportPTP;
-                            else if (command.Type == CommandSubType.Text)
-                                action = ImportText;
-                        }
-                        else if (command.Command == CommandType.Save)
-                            SaveFile(file, command.Value, argwrk.OpenedFileDir, command.Parameters);
-
-                        if (action != null)
-                            SubFileAction(action, file, command.Value, argwrk.OpenedFileDir, command.Parameters);
-                    }
+                TextImportCache.Clear();
+                ProcessDirectory(argwrk);
+                TextImportCache.Clear();
+                return;
             }
+
+            GameFile file = GameFormatHelper.OpenFile(Path.GetFileName(argwrk.OpenedFile), File.ReadAllBytes(argwrk.OpenedFile));
+
+            if (file != null)
+                ProcessFile(file, argwrk.ArgumentList, argwrk.OpenedFileDir);
+        }
+
+        static void ProcessDirectory(ArgumentsWork argwrk)
+        {
+            PrepareDirectoryExport(argwrk.ArgumentList);
+
+            foreach (string filePath in Directory.EnumerateFiles(argwrk.OpenedFile, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    GameFile file = GameFormatHelper.OpenFile(Path.GetFileName(filePath), File.ReadAllBytes(filePath));
+                    if (file != null)
+                        ProcessFile(file, argwrk.ArgumentList, Path.GetDirectoryName(filePath));
+                }
+                catch
+                {
+                }
+            }
+
+            FinalizeDirectoryExport(argwrk.ArgumentList);
+        }
+
+        static void PrepareDirectoryExport(IEnumerable<Argument> commands)
+        {
+            foreach (var command in commands)
+                if (command.Command == CommandType.Export && command.Type == CommandSubType.Text && command.Value != "")
+                    File.WriteAllText(command.Value, "");
+        }
+
+        static void FinalizeDirectoryExport(IEnumerable<Argument> commands)
+        {
+            foreach (var command in commands)
+                if (command.Command == CommandType.Export && command.Type == CommandSubType.Text && command.Value != "" && File.Exists(command.Value))
+                    RemoveDuplicateTextRows(command.Value, command.Parameters.FileEncoding);
+        }
+
+        static void ProcessFile(GameFile file, IEnumerable<Argument> commands, string openedFileDir)
+        {
+            foreach (var command in commands)
+                ProcessCommand(file, command, openedFileDir);
+        }
+
+        static void ProcessCommand(GameFile file, Argument command, string openedFileDir)
+        {
+            Action<GameFile, string, string, Parameters> action = null;
+            if (command.Command == CommandType.Export)
+            {
+                if (command.Type == CommandSubType.Image)
+                    action = ExportImage;
+                else if (command.Type == CommandSubType.Table)
+                    action = ExportTable;
+                else if (command.Type == CommandSubType.All)
+                    ExportAll(file, openedFileDir);
+                else if (command.Type == CommandSubType.PTP)
+                    action = ExportPTP;
+                else if (command.Type == CommandSubType.Text)
+                    action = ExportText;
+                else
+                    action = ExportByType;
+            }
+            else if (command.Command == CommandType.Import)
+            {
+                if (command.Type == CommandSubType.Image)
+                    action = ImportImage;
+                else if (command.Type == CommandSubType.Table)
+                    action = ImportTable;
+                else if (command.Type == CommandSubType.All)
+                    ImportAll(file, openedFileDir);
+                else if (command.Type == CommandSubType.PTP)
+                    action = ImportPTP;
+                else if (command.Type == CommandSubType.Text)
+                    action = ImportText;
+            }
+            else if (command.Command == CommandType.Save)
+                SaveFile(file, command.Value, openedFileDir, command.Parameters);
+
+            if (action != null)
+                SubFileAction(action, file, command.Value, openedFileDir, command.Parameters);
         }
 
         static void ExportImage(GameFile objectFile, string value, string openedFileDir, Parameters parameters)
@@ -278,7 +330,7 @@ namespace PersonaEditorCMD
                 string path = value == "" ? Path.Combine(openedFileDir, Path.GetFileNameWithoutExtension(objectFile.Name) + ".TXT") : value;
                 if (File.Exists(path))
                 {
-                    string[][] importedtext = File.ReadAllLines(path, parameters.FileEncoding).Select(x => x.Split('\t')).
+                    string[][] importedtext = GetTextRows(path, parameters.FileEncoding).
                         Where(x => x.Length > 1 && x[1] != "").ToArray();
                     strlst.ImportText(importedtext);
                 }
@@ -306,9 +358,7 @@ namespace PersonaEditorCMD
             if (!File.Exists(path))
                 return false;
 
-            var rows = File.ReadAllLines(path, parameters.FileEncoding)
-                .Select(x => x.Split('\t'))
-                .ToList();
+            var rows = GetTextRows(path, parameters.FileEncoding);
 
             LineMap map = new LineMap(parameters.Map);
             List<(int Index, string Text)> imported = new List<(int Index, string Text)>();
@@ -328,7 +378,7 @@ namespace PersonaEditorCMD
             index = -1;
             text = "";
 
-            if (row.Length >= 4 && row[0].Equals(objectFileName, StringComparison.CurrentCultureIgnoreCase))
+            if (row.Length >= 4 && IsMatchingFileName(row[0], objectFileName))
             {
                 if (int.TryParse(row[1], out index))
                 {
@@ -340,7 +390,7 @@ namespace PersonaEditorCMD
             if (row.Length >= map.MinLength)
             {
                 int fileNameColumn = map[LineMap.Type.FileName];
-                if (fileNameColumn >= 0 && !row[fileNameColumn].Equals(objectFileName, StringComparison.CurrentCultureIgnoreCase))
+                if (fileNameColumn >= 0 && !IsMatchingFileName(row[fileNameColumn], objectFileName))
                     return false;
 
                 int indexColumn = map[LineMap.Type.StringIndex] >= 0 ? map[LineMap.Type.StringIndex] : map[LineMap.Type.MSGindex];
@@ -368,7 +418,7 @@ namespace PersonaEditorCMD
             if (!File.Exists(path))
                 return false;
 
-            List<string[]> import = File.ReadAllLines(path, parameters.FileEncoding).Select(x => x.Split('\t')).ToList();
+            List<string[]> import = GetTextRows(path, parameters.FileEncoding);
             LineMap MAP = new LineMap(parameters.Map);
 
             if (parameters.LineByLine)
@@ -390,7 +440,7 @@ namespace PersonaEditorCMD
                 {
                     string[][] importedText = import
                         .Where(x => x.Length >= MAP.MinLength)
-                        .Where(x => x[MAP[LineMap.Type.FileName]].Equals(objectFileName, StringComparison.CurrentCultureIgnoreCase))
+                        .Where(x => IsMatchingFileName(x[MAP[LineMap.Type.FileName]], objectFileName))
                         .Where(x => x[MAP[LineMap.Type.NewText]] != "")
                         .Select(x => new string[]
                         {
@@ -420,6 +470,55 @@ namespace PersonaEditorCMD
             }
 
             return true;
+        }
+
+        static List<string[]> GetTextRows(string path, Encoding encoding)
+        {
+            string key = $"{Path.GetFullPath(path)}|{encoding.WebName}";
+            if (!TextImportCache.TryGetValue(key, out List<string[]> rows))
+            {
+                rows = File.ReadAllLines(path, encoding).Select(x => x.Split('\t')).ToList();
+                TextImportCache.Add(key, rows);
+            }
+
+            return rows;
+        }
+
+        static bool IsMatchingFileName(string value, string objectFileName)
+        {
+            return value.Split('|').Any(x => x.Equals(objectFileName, StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        static void RemoveDuplicateTextRows(string path, Encoding encoding)
+        {
+            string[] lines = File.ReadAllLines(path, encoding);
+            Dictionary<string, string[]> rows = new Dictionary<string, string[]>();
+
+            foreach (string line in lines)
+            {
+                string[] columns = line.Split('\t');
+                if (columns.Length <= 1)
+                {
+                    rows.TryAdd(line, new[] { line });
+                    continue;
+                }
+
+                string key = string.Join('\t', columns.Skip(1));
+                if (rows.TryGetValue(key, out string[] existing))
+                    existing[0] = MergeFileNames(existing[0], columns[0]);
+                else
+                    rows.Add(key, columns);
+            }
+
+            File.WriteAllLines(path, rows.Values.Select(x => string.Join('\t', x)), encoding);
+        }
+
+        static string MergeFileNames(string first, string second)
+        {
+            return string.Join("|", first.Split('|')
+                .Concat(second.Split('|'))
+                .Where(x => x != "")
+                .Distinct(StringComparer.CurrentCultureIgnoreCase));
         }
 
         static void ExportByType(GameFile objectFile, string value, string openedFileDir, Parameters parameters)

@@ -20,6 +20,7 @@ namespace PersonaEditorLib.SpriteContainer
         private readonly List<Spr6PanelEntry> panels = new List<Spr6PanelEntry>();
         private readonly List<Spr6SpriteEntry> sprites = new List<Spr6SpriteEntry>();
         private readonly List<SPRKey> keys = new List<SPRKey>();
+        private readonly FormatEnum type;
         private int textureIdBase;
 
         public short Field04 { get; set; }
@@ -27,8 +28,12 @@ namespace PersonaEditorLib.SpriteContainer
         public short Field0C { get; set; }
         public int Field1C { get; set; }
 
-        public SPR6(byte[] data)
+        public SPR6(byte[] data, FormatEnum type = FormatEnum.SPR6)
         {
+            if (type != FormatEnum.SPR6 && type != FormatEnum.SPR4)
+                throw new ArgumentOutOfRangeException(nameof(type));
+
+            this.type = type;
             using (var ms = new MemoryStream(data))
             using (var reader = IOTools.OpenReadFile(ms, true))
             {
@@ -40,7 +45,7 @@ namespace PersonaEditorLib.SpriteContainer
 
         public List<SPRKey> KeyList => keys;
 
-        public FormatEnum Type => FormatEnum.SPR6;
+        public FormatEnum Type => type;
 
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
@@ -239,7 +244,8 @@ namespace PersonaEditorLib.SpriteContainer
             for (int i = 0; i < textures.Count; i++)
             {
                 var nameBase = SanitizeName(textures[i].Description, $"texture_{i:D3}");
-                SubFiles.Add(new GameFile(nameBase + ".tga", new Spr6TextureProxy(this, i)));
+                var extension = IsGnfTexture(textures[i].Data) ? ".gnf" : ".tga";
+                SubFiles.Add(new GameFile(nameBase + extension, new Spr6TextureProxy(this, i)));
             }
         }
 
@@ -370,8 +376,14 @@ namespace PersonaEditorLib.SpriteContainer
             return string.IsNullOrWhiteSpace(cleaned) ? fallback : cleaned;
         }
 
+        private static bool IsGnfTexture(byte[] data)
+            => GNF.IsGnf(data);
+
         private static Bitmap DecodeTexture(byte[] data)
         {
+            if (IsGnfTexture(data))
+                return new GNF(data).GetBitmap();
+
             if (data == null || data.Length < 18)
                 throw new InvalidDataException("SPR6 texture: invalid TGA data.");
 
@@ -500,7 +512,7 @@ namespace PersonaEditorLib.SpriteContainer
                 this.index = index;
             }
 
-            public FormatEnum Type => FormatEnum.DAT;
+            public FormatEnum Type => IsGnfTexture(owner.textures[index].Data) ? FormatEnum.GNF : FormatEnum.DAT;
 
             public List<GameFile> SubFiles { get; } = new List<GameFile>();
 
@@ -512,7 +524,17 @@ namespace PersonaEditorLib.SpriteContainer
 
             public void SetBitmap(Bitmap bitmap)
             {
-                owner.textures[index].Data = EncodeTexture(bitmap);
+                if (IsGnfTexture(owner.textures[index].Data))
+                {
+                    var gnf = new GNF(owner.textures[index].Data);
+                    gnf.SetBitmap(bitmap);
+                    owner.textures[index].Data = gnf.GetData();
+                }
+                else
+                {
+                    owner.textures[index].Data = EncodeTexture(bitmap);
+                }
+
                 owner.textures[index].Size = owner.textures[index].Data.Length;
             }
         }

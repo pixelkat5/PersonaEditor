@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using PersonaEditorLib.Other;
+using PersonaEditorLib.Sprite;
 
 namespace PersonaEditorLib.FileContainer
 {
@@ -174,6 +176,34 @@ namespace PersonaEditorLib.FileContainer
 
                 position += entrySize;
             }
+
+            PairHipFonts();
+        }
+
+        private void PairHipFonts()
+        {
+            var abcFiles = SubFiles
+                .Where(x => string.Equals(Path.GetExtension(x.Name), ".abc", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(x => Path.GetFileNameWithoutExtension(x.Name), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (GameFile hipFile in SubFiles.Where(x => x.GameData is HIP))
+            {
+                string name = Path.GetFileNameWithoutExtension(hipFile.Name);
+                if (!abcFiles.TryGetValue(name, out GameFile abcFile))
+                    continue;
+
+                HIP hip = (HIP)hipFile.GameData;
+                try
+                {
+                    hip.LoadAbcData(abcFile.GameData.GetData());
+                    abcFile.GameData = new AbcFontData(hip.Font);
+                }
+                catch
+                {
+                    // Leave malformed or unrelated ABC entries as ordinary archive files.
+                }
+            }
         }
 
         private bool DetectBigEndian(byte[] data)
@@ -279,6 +309,22 @@ namespace PersonaEditorLib.FileContainer
         {
             int remainder = position % alignment;
             return remainder == 0 ? 0 : alignment - remainder;
+        }
+
+        private sealed class AbcFontData : IGameData
+        {
+            private readonly ABCFont font;
+
+            public AbcFontData(ABCFont font)
+            {
+                this.font = font;
+            }
+
+            public FormatEnum Type => FormatEnum.DAT;
+            public List<GameFile> SubFiles { get; } = new List<GameFile>();
+            public List<GameFile> GetSubFiles() => SubFiles;
+            public int GetSize() => font.GetData().Length;
+            public byte[] GetData() => font.GetData();
         }
     }
 }

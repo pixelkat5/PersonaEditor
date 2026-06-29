@@ -28,13 +28,24 @@ namespace PersonaEditorLib.FileContainer
             using (BinaryReader reader = IOTools.OpenReadFile(new MemoryStream(data), IsLittleEndian))
             {
                 List<int[]> Entry = new List<int[]>();
+                int tableEnd = 0;
 
-                do
+                while (reader.BaseStream.Position + 12 <= reader.BaseStream.Length)
                 {
-                    Entry.Add(reader.ReadInt32Array(3));
-                } while (Entry[Entry.Count - 1][1] != 0);
+                    int[] entry = reader.ReadInt32Array(3);
+                    Entry.Add(entry);
 
-                for (int i = 0; i < Entry.Count - 1; i++)
+                    if (entry[1] == 0)
+                        break;
+
+                    if (tableEnd == 0)
+                        tableEnd = entry[1];
+
+                    if (reader.BaseStream.Position >= tableEnd)
+                        break;
+                }
+
+                for (int i = 0; i < Entry.Count && Entry[i][1] != 0; i++)
                 {
                     FlagList.Add(Entry[i][0]);
                     reader.BaseStream.Position = Entry[i][1];

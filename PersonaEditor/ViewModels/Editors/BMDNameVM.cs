@@ -1,6 +1,7 @@
-﻿using PersonaEditor.Classes;
 using AuxiliaryLibraries.WPF;
+using PersonaEditor.Classes;
 using PersonaEditorLib.Text;
+using System.Linq;
 
 namespace PersonaEditor.ViewModels.Editors
 {
@@ -16,7 +17,11 @@ namespace PersonaEditor.ViewModels.Editors
         public void Changes(bool save, int destFont)
         {
             if (save)
-                name.NameBytes = Static.EncodingManager.GetPersonaEncoding(destFont).GetBytes(Name);
+            {
+                var encoding = Static.EncodingManager.GetPersonaEncoding(destFont);
+                byte[] newNameBytes = Name.GetTextBases(encoding).GetByteArray();
+                name.NameBytes = newNameBytes.SequenceEqual(name.NameBytes) ? name.NameBytes : newNameBytes;
+            }
             else
             {
                 Name = name.NameBytes.GetTextBases().GetString(Static.EncodingManager.GetPersonaEncoding(sourceFont));

@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Buffers.Binary;
+using PersonaEditorLib.Other;
 using DrawingColor = System.Drawing.Color;
 
 namespace PersonaEditorLib.Sprite
@@ -50,8 +51,33 @@ namespace PersonaEditorLib.Sprite
 
         public FormatEnum Type => FormatEnum.HIP;
         public List<GameFile> SubFiles { get; } = new List<GameFile>();
+        public ABCFont Font { get; private set; }
+        public bool HasFont => Font != null;
         public int GetSize() => !dirty && originalData != null ? originalData.Length : GetData().Length;
         public Bitmap GetBitmap() => bitmap;
+
+        public void LoadAbcSidecar(string path)
+        {
+            if (!File.Exists(path))
+                return;
+
+            try
+            {
+                LoadAbcData(File.ReadAllBytes(path), path);
+            }
+            catch
+            {
+                Font = null;
+            }
+        }
+
+        public void LoadAbcData(byte[] data, string sidecarPath = null)
+        {
+            Font = new ABCFont(data, bitmap.Width, bitmap.Height)
+            {
+                SidecarPath = sidecarPath
+            };
+        }
 
         public void SetBitmap(Bitmap bitmap)
         {

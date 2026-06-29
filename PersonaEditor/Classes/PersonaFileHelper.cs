@@ -13,6 +13,7 @@ namespace PersonaEditor.Classes
             FormatEnum.SPR,
             FormatEnum.SPR3,
             FormatEnum.SPR6,
+            FormatEnum.SPR4,
             FormatEnum.FTD,
             FormatEnum.ATF,
             FormatEnum.DAT,
@@ -32,6 +33,8 @@ namespace PersonaEditor.Classes
 
             if (gameFile.GameData is PersonaEditorLib.SpriteContainer.TPC tpc)
                 return tpc.HasSpriteInfo;
+            if (gameFile.GameData is PersonaEditorLib.Sprite.HIP hip)
+                return hip.HasFont;
 
             return contextMenuItemsEdited.Contains(gameFile.GameData.Type);
         }

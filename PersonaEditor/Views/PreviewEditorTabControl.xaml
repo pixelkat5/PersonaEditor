@@ -179,6 +179,11 @@
                                         <editors:FNTEditor/>
                                     </Border>
                                 </DataTemplate>
+                                <DataTemplate DataType="{x:Type editorsVM:HIPFontEditorVM}">
+                                    <Border BorderBrush="Black" BorderThickness="1">
+                                        <editors:HIPFontEditor/>
+                                    </Border>
+                                </DataTemplate>
                             </ContentControl.Resources>
                         </ContentControl>
                     </DataTemplate>

@@ -1,93 +1,192 @@
-﻿Supported file type: 
-	Container: BIN (BIN, PAK, PAC, P00, ARC); PM1; BF; BVP; TBL
-	Graphic: SPR; TMX
-	Font: FNT
-	Text: BMD (BMD, MSG); PTP; ATF
+PersonaEditorCMD user guide
+===========================
 
-For select OLD/NEW font: open PersonaEditor.xml and input your font name (without extention).
+PersonaEditorCMD is the command-line version of PersonaEditor. It can export,
+import, and rebuild supported containers, images, font tables, and text files.
 
-Command: PersonaEditor.exe "FilePath" [-command] [/arguments] [-command] [/arguments]...
+Portuguese guide: readme.pt-BR.txt
 
-[-command]:
-	-expimage	- Export image as PNG.
-		Support: FNT, TMX
-	-impimage	- Import PNG image.
-		Support: FNT
 
-	-exptable	- Export width table.
-	-imptable	- Import width table.
-		Support: FNT
+Basic syntax
+------------
 
-	-expptp		- Export PTP from opened file (if it's BMD) or from all subfiles (see argument /sub).
-	-impptp		- Import PTP to opened file (if it's BMD) or to all subfile.
-		Support: All files.
+PersonaEditorCMD.exe "<file-or-folder>" -command [value] [/option [value]] ...
 
-	-exptext	- Export text from PTP, BMD/MSG, or ATF.
-	-imptext	- Import text to PTP, BMD/MSG, or ATF.
-		Support: PTP; BMD (BMD, MSG); ATF
+Examples:
 
-	-expall		- Export all subfiles from opened file.
-	-impall		- Import all finding subfiles.
-		Support: BIN; SPR; BF; PM1; BVP; TBL.
+PersonaEditorCMD.exe "event.bf" -exptext "event.txt" /sub /rmvspl
+PersonaEditorCMD.exe "event.bf" -imptext "event.txt" /sub -save /ovrw
+PersonaEditorCMD.exe "GameFiles" -exptext "AllText.txt" /sub /rmvspl
+PersonaEditorCMD.exe "font.fnt" -exptable -impimage "font.png" -save
 
-	-exp[FileType]	- Export all files with FileType and subfiles (see argument /sub); FileType: BIN (BIN, PAK, PAC, P00, ARC); SPR; TMX; BF; PM1; BMD (BMD, MSG); FNT; BVP; HEX - HEX is all unknown type files.
-		Support: All files.
+Options belong to the command immediately before them. For example, use
+`-save /ovrw`, not `/ovrw` on an earlier command, when you want to overwrite the
+saved file.
 
-	
 
-[/arguments]:
-	/sub 		- Recursively do command. Example: "file.bin -expptp /sub"
+Input files and folders
+-----------------------
 
-	/map "pattern"	- When you will be import text from text file you must set pattern. A text file is a set of line. Each line contains a set of values separated by Tab key. 
-	
-	MAP:
-	   %I - ignore
-	   %FN - file name
-	   %MSGIND - MSG index
-	   %MSGNM - MSG name
-	   %STRIND - MSG's String index
-	   %OLDSTR - Old text
-	   %NEWSTR - New text
-	   %OLDNM - Old name
-	   %NEWNM - New name
+The first argument can be a single file or a folder.
 
-	For import new string you must have: %FN & (%MSGIND | %MSGNM) & %STRIND & %NEWSTR
-	Or for import new string and new name (line by line) you must have: %NEWSTR or/and %NEWNM 
-	For import new name you must have: %OLDNM & %NEWNM
-	
+Single file:
+  Commands run on that file. Use `/sub` when you want container subfiles to be
+  processed recursively.
 
-	Example:
-	   Text:	E100_000.PTP[tab]1[tab]1[tab]Igor[tab]Original text...[tab]Translate...
-	   Pattert:	"%FN %MSGIND %STRIND %I %I %NEWSTR"
+Folder:
+  Commands run on every supported file found in the folder and its subfolders.
+  Folder text export can write everything into one TXT:
 
-	/lbl		- When import text to PTP (-imptext), use this command to import line by line.
+  PersonaEditorCMD.exe "GameFiles" -exptext "Output.txt" /sub
 
-	/auto "int"	- When import text to PTP (-imptext), use this command to automatic hyphenation by width (in pixel). Optional. Otherwise inserts the string as is (considering LINE FEED "\n").
+  Duplicate text rows are collapsed at the end. If two rows only differ by file
+  name, the file names are joined with `|`, for example:
 
-	/co2n 		- When export PTP (-expptp), use this command to copy the old (source) text to the new one.
+  file_a.bmd|file_b.bmd    0    1    Old text    New text
 
-	/rmvspl 	- When export text from PTP (-exptext), use this command to replace "\n" to " ".
+  Text import understands this `|` file-name list and imports the row into each
+  matching file.
 
-	/skipempty	- When import text to PTP (-imptext), use this command to skip empty (untranslate) text.
 
-	/enc "ENCODING" - When import text to PTP (-imptext), use this command to set encoding of your text file. Optional. Default UTF-8.
-		"ENCODING":	"UTF-7"
-				"UTF-16"
-				"UTF-32"
+Common commands
+---------------
 
-	/size 13842	- When import image to FNT (-impimage), use this command to set new font's size. Optional.
-	
-	/ovrw  		- Overwrites the original file instead of adding "(NEW)" to the file name
+-exptext [TXT]
+  Export text from PTP, BMD/MSG, ATF, and supported string-list files. If TXT is
+  omitted, a TXT is created next to the source file.
 
-Basic example. You have BIN file, that contain two BF.
-For export:
-"PersonaEditor.exe EXAMPLE.BIN -expptp /sub /co2n" - this create PTP from all BMD files (also sub) in BIN. "/co2n" mean copy old text to new in PTP.
-"PersonaEditor.exe EXAMPLE_SUB.PTP -exptext FILE.TXT /map "%FN %MSGIND %STRIND %OLDNM %OLDSTR" /rmvspl" - this export text from PTP to destination TXT. "/rmvspl" mean delete "new line" ("\n") from string.
-"PersonaEditor.exe EXAMPLE_SUB.PTP -imptext FILE.TXT /map "%FN %MSGIND %STRIND %I %I %NEWSTR" /auto 580 /skipempty -save" - this import text to PTP. "/skipempty" mean dont import empty string from text file.
-"PersonaEditor.exe EXAMPLE.BIN -impptp /sub -save" - this import PTP to all BMD files (also sub) in BIN. "-save" mean save opened file.
+-imptext [TXT]
+  Import text into PTP, BMD/MSG, ATF, and supported string-list files. Usually
+  followed by `-save`.
 
-If tou have BMD file:
-"PersonaEditor.exe EXAMPLE.BMD -expptp /co2n" - this create PTP from all BMD files (also sub) in BIN. "/co2n" mean copy old text to new in PTP.
-"PersonaEditor.exe EXAMPLE.PTP -exptext FILE.TXT /map "%FN %MSGIND %STRIND %OLDNM %OLDSTR" /rmvspl" - this export text from PTP to destination TXT. "/rmvspl" mean delete "new line" ("\n") from string.
-"PersonaEditor.exe EXAMPLE.PTP -imptext FILE.TXT /map "%FN %MSGIND %STRIND %I %I %NEWSTR" /auto 580 /skipempty -save" - this import text to PTP. "/skipempty" mean dont import empty string from text file.
-"PersonaEditor.exe EXAMPLE.BMD -impptp -save" - this import PTP to all BMD files (also sub) in BIN. "-save" mean save opened file.
+-expptp
+  Export PTP files from BMD/MSG files. Use `/sub` for BMD files inside
+  containers.
+
+-impptp
+  Import matching PTP files back into BMD/MSG files. Usually followed by
+  `-save`.
+
+-expimage
+  Export supported images as PNG. Use `/sub` for images inside containers.
+
+-impimage [PNG]
+  Import a PNG into a supported image file. If PNG is omitted, the tool looks for
+  a PNG with the same base name as the opened file.
+
+-exptable
+  Export a supported font/table file to XML.
+
+-imptable [XML]
+  Import a supported font/table XML. If XML is omitted, the tool looks for an XML
+  with the same base name as the opened file.
+
+-expall
+  Export immediate subfiles from a container.
+
+-impall
+  Import matching immediate subfiles back into a container. Usually followed by
+  `-save`.
+
+-save [OUTPUT]
+  Write the modified file. If OUTPUT is omitted, the default output name is
+  `Name(NEW).ext`. Add `/ovrw` to overwrite the original file.
+
+
+Useful options
+--------------
+
+/sub
+  Process subfiles recursively when the opened file is a container.
+
+/map "PATTERN"
+  Tell `-imptext` how TSV columns should be read. Default:
+
+  "%FN %MSGIND %STRIND %I %I %NEWSTR"
+
+  Available fields:
+  %I       ignore this column
+  %FN      file name
+  %MSGIND  message index
+  %MSGNM   message name
+  %STRIND  string index
+  %OLDSTR  old/source text
+  %NEWSTR  new/imported text
+  %OLDNM   old/source speaker name
+  %NEWNM   new/imported speaker name
+
+/rmvspl
+  On text export, replace line breaks inside strings with spaces.
+
+/auto WIDTH
+  On PTP text import, automatically wrap text using the selected font width.
+  Example: `/auto 580`.
+
+/co2n
+  On PTP export, copy old/source text into the new/translated text column.
+
+/lbl
+  On PTP text import, import line by line instead of using message/string
+  indexes.
+
+/enc ENCODING
+  Text file encoding. Default is UTF-8. Supported explicit values:
+  UTF-7, UTF-16, UTF-32.
+
+/size SIZE
+  On FNT image import, resize the font texture before importing the PNG.
+
+/bmd
+  When saving a PTP file, save it as BMD.
+
+/ovrw
+  On `-save`, overwrite the original file instead of creating `Name(NEW).ext`.
+
+
+Text import examples
+--------------------
+
+Export text from one container:
+
+PersonaEditorCMD.exe "E100_000.BF" -exptext "E100_000.txt" /sub /rmvspl
+
+Import edited text and overwrite the original:
+
+PersonaEditorCMD.exe "E100_000.BF" -imptext "E100_000.txt" /sub -save /ovrw
+
+Export every supported text file in a folder into one TXT:
+
+PersonaEditorCMD.exe "GameFiles" -exptext "AllText.txt" /sub /rmvspl
+
+Import that combined TXT back into every matching file:
+
+PersonaEditorCMD.exe "GameFiles" -imptext "AllText.txt" /sub -save /ovrw
+
+Import with an explicit TSV map:
+
+PersonaEditorCMD.exe "event.ptp" -imptext "event.txt" /map "%FN %MSGIND %STRIND %I %I %NEWSTR" -save /ovrw
+
+
+Supported formats
+-----------------
+
+The tool opens many formats through PersonaEditorLib, including:
+
+Containers:
+  BIN, PAC, SPR, SPR3, SPR6, BF, PM1, BVP, TBL, TPC, LB
+
+Images and textures:
+  TMX, DDS, CTPK, G1T, CMP/DMPBM, HIP
+
+Text and fonts:
+  BMD/MSG, PTP, ATF, FNT, FNT0, ABC sidecars for HIP fonts
+
+Unknown or raw files may appear as DAT/HEX when exported from containers.
+
+
+Font settings
+-------------
+
+PersonaEditorCMD creates `PersonaEditor.xml` next to the executable. Edit
+`OldFont` and `NewFont` there when PTP import/export needs a specific font for
+encoding or automatic line wrapping. Use the font name without the extension.

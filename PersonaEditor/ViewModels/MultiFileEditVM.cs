@@ -73,8 +73,23 @@ namespace PersonaEditor.ViewModels
 
                     if (root.GameData is PersonaEditorLib.SpriteContainer.TPC tpc && tpc.HasSpriteInfo && File.Exists(tpc.GtxSidecarPath))
                         SaveGtxSidecar(path, tpc);
+                    else if (root.GameData is PersonaEditorLib.Sprite.HIP hip && hip.HasFont)
+                        SaveAbcSidecar(path, hip);
                 }
             }
+        }
+
+        private static void SaveAbcSidecar(string hipSavePath, PersonaEditorLib.Sprite.HIP hip)
+        {
+            var sfd = new Microsoft.Win32.SaveFileDialog();
+            sfd.OverwritePrompt = true;
+            sfd.AddExtension = true;
+            sfd.InitialDirectory = Path.GetDirectoryName(hipSavePath);
+            sfd.FileName = Path.GetFileName(Path.ChangeExtension(hipSavePath, ".abc"));
+            sfd.Filter = "ABC font (*.abc)|*.abc";
+
+            if (sfd.ShowDialog() == true)
+                File.WriteAllBytes(sfd.FileName, hip.Font.GetData());
         }
 
         private static void SaveGtxSidecar(string tpcSavePath, PersonaEditorLib.SpriteContainer.TPC tpc)

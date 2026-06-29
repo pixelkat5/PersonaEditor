@@ -2,6 +2,7 @@
 using PersonaEditorLib.Other;
 using PersonaEditorLib.SpriteContainer;
 using PersonaEditorLib.Text;
+using PersonaEditorLib.Sprite;
 using AuxiliaryLibraries.WPF;
 using PersonaEditor.Classes;
 using PersonaEditor.ViewModels.Editors;
@@ -74,6 +75,7 @@ namespace PersonaEditor.ViewModels
                     DataContext = new SPREditorVM(sender.PersonaFile.GameData as SPR3);
                     break;
                 case FormatEnum.SPR6:
+                case FormatEnum.SPR4:
                     DataContext = new SPREditorVM(sender.PersonaFile.GameData as SPR6);
                     break;
                 case FormatEnum.TPC:
@@ -99,6 +101,9 @@ namespace PersonaEditor.ViewModels
                     break;
                 case FormatEnum.FNT0:
                     DataContext = new FNT0EditorVM(sender.PersonaFile.GameData as FNT0);
+                    break;
+                case FormatEnum.HIP when (sender.PersonaFile.GameData as HIP)?.HasFont == true:
+                    DataContext = new HIPFontEditorVM(sender.PersonaFile.GameData as HIP);
                     break;
                 case FormatEnum.DAT:
                     DataContext = new HEXEditorVM(sender.PersonaFile.GameData as DAT);
