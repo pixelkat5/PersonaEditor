@@ -552,7 +552,9 @@ namespace PersonaEditorCMD
         {
             foreach (var a in objectFile.GameData.SubFiles)
             {
-                string newpath = Path.Combine(openedFileDir, a.Name.Replace('/', '+'));
+                string fileName = objectFile.GameData.Type == FormatEnum.APK ? a.Name : a.Name.Replace('/', '+');
+                string newpath = Path.Combine(openedFileDir, fileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(newpath));
                 File.WriteAllBytes(newpath, a.GameData.GetData());
             }
         }
@@ -561,7 +563,8 @@ namespace PersonaEditorCMD
         {
             foreach (var item in objectFile.GameData.SubFiles)
             {
-                string newpath = Path.Combine(openedFileDir, item.Name.Replace('/', '+'));
+                string fileName = objectFile.GameData.Type == FormatEnum.APK ? item.Name : item.Name.Replace('/', '+');
+                string newpath = Path.Combine(openedFileDir, fileName);
                 FormatEnum fileType = item.GameData.Type;
 
                 if (File.Exists(newpath))

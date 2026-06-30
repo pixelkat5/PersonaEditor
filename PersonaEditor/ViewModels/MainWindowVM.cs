@@ -13,6 +13,7 @@ namespace PersonaEditor.Views
     {
         Views.Tools.Visualizer visualizer;
         Views.Tools.SetChar setchar;
+        private bool batchRunning;
 
         public MultiFileEditVM MultiFile { get; } = new MultiFileEditVM();
 
@@ -79,6 +80,50 @@ namespace PersonaEditor.Views
 
         }
 
+        public ICommand clickBatchExportImage { get; }
+        private void BatchExportImage()
+        {
+            string source = SelectFolder("Select source folder");
+            if (source == null)
+                return;
+
+            string output = SelectFolder("Select output folder (Cancel to export beside source files)");
+            RunBatch("Batch Image Export", () => PersonaEditor.Classes.BatchProcessor.ExportImages(source, output));
+        }
+
+        public ICommand clickBatchImportImage { get; }
+        private void BatchImportImage()
+        {
+            string source = SelectFolder("Select original folder");
+            if (source == null)
+                return;
+
+            string input = SelectFolder("Select modified image folder (Cancel to use original folder)");
+            RunBatch("Batch Image Import", () => PersonaEditor.Classes.BatchProcessor.ImportImages(source, input ?? source), true);
+        }
+
+        public ICommand clickBatchExportText { get; }
+        private void BatchExportText()
+        {
+            string source = SelectFolder("Select source folder");
+            if (source == null)
+                return;
+
+            string output = SelectTextSavePath("Select output TXT file (Cancel to export beside source files)");
+            RunBatch("Batch Text Export", () => PersonaEditor.Classes.BatchProcessor.ExportText(source, output));
+        }
+
+        public ICommand clickBatchImportText { get; }
+        private void BatchImportText()
+        {
+            string source = SelectFolder("Select original folder");
+            if (source == null)
+                return;
+
+            string input = SelectTextOpenPath("Select translated TXT file (Cancel to use TXT files beside source files)");
+            RunBatch("Batch Text Import", () => PersonaEditor.Classes.BatchProcessor.ImportText(source, input), true);
+        }
+
         public ICommand clickVisualizerOpen { get; }
         private void ToolVisualizerOpen()
         {
@@ -125,6 +170,67 @@ namespace PersonaEditor.Views
             (new About()).ShowDialog();
         }
 
+        private string SelectFolder(string title)
+        {
+            var dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog
+            {
+                IsFolderPicker = true,
+                Title = title
+            };
+
+            return dialog.ShowDialog() == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok ? dialog.FileName : null;
+        }
+
+        private string SelectTextSavePath(string title)
+        {
+            var dialog = new SaveFileDialog
+            {
+                Title = title,
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = "Output.txt",
+                OverwritePrompt = true
+            };
+
+            return dialog.ShowDialog() == true ? dialog.FileName : null;
+        }
+
+        private string SelectTextOpenPath(string title)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = title,
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            return dialog.ShowDialog() == true ? dialog.FileName : null;
+        }
+
+        private async void RunBatch(string title, System.Func<PersonaEditor.Classes.BatchResult> action, bool import = false)
+        {
+            if (batchRunning)
+                return;
+
+            try
+            {
+                batchRunning = true;
+                Mouse.OverrideCursor = Cursors.Wait;
+                var result = await System.Threading.Tasks.Task.Run(action);
+                string count = import ? $"Imported: {result.Imported}" : $"Exported: {result.Exported}";
+                string saved = import ? "\nModified source files were overwritten." : "";
+                System.Windows.MessageBox.Show($"{count}\nFailed: {result.Failed}{saved}", title, System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (System.Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.Message, title, System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+            finally
+            {
+                batchRunning = false;
+                Mouse.OverrideCursor = null;
+            }
+        }
+
         #endregion Events
 
         public ICommand clickTest { get; }
@@ -143,6 +249,10 @@ namespace PersonaEditor.Views
             WindowClosing = new RelayCommand(Window_Closing);
             clickOpenFile = new RelayCommand(OpenFile);
             clickSaveAsFile = new RelayCommand(SaveAsFile);
+            clickBatchExportImage = new RelayCommand(BatchExportImage);
+            clickBatchImportImage = new RelayCommand(BatchImportImage);
+            clickBatchExportText = new RelayCommand(BatchExportText);
+            clickBatchImportText = new RelayCommand(BatchImportText);
             clickSettingOpen = new RelayCommand(SettingOpen);
             clickVisualizerOpen = new RelayCommand(ToolVisualizerOpen);
             clickSetCharOpen = new RelayCommand(ToolSetCharOpen);

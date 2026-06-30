@@ -4,6 +4,11 @@
     <v:String x:Key="main_File">File</v:String>
     <v:String x:Key="main_OpenFile">Open File</v:String>
     <v:String x:Key="main_SaveAs">Save As...</v:String>
+    <v:String x:Key="main_Batch">Batch</v:String>
+    <v:String x:Key="main_Import">Import</v:String>
+    <v:String x:Key="main_Export">Export</v:String>
+    <v:String x:Key="main_Image">Image</v:String>
+    <v:String x:Key="main_Text">Text</v:String>
 
     <v:String x:Key="main_Tools">Tools</v:String>
     <v:String x:Key="main_Visualizer">Visualizer</v:String>

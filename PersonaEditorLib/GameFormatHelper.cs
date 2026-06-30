@@ -16,6 +16,7 @@ namespace PersonaEditorLib
             { ".abin", FormatEnum.BIN },
             { ".pak",  FormatEnum.BIN },
             { ".pac",  FormatEnum.PAC },
+            { ".apk",  FormatEnum.APK },
             { ".paccs", FormatEnum.PAC },
             { ".pacgz", FormatEnum.PAC },
             { ".fontpac", FormatEnum.PAC },
@@ -86,6 +87,8 @@ namespace PersonaEditorLib
                     {
                         Obj = new DAT(data);
                     }
+                else if (type == FormatEnum.APK)
+                    Obj = new FileContainer.APK(data);
                 else if (type == FormatEnum.SPR)
                     Obj = new SpriteContainer.SPR(data);
                 else if (type == FormatEnum.SPR3)

@@ -43,6 +43,16 @@
             <MenuItem Header="{DynamicResource main_File}">
                 <MenuItem Header="{DynamicResource main_OpenFile}" Command="{Binding Path=clickOpenFile}"/>
                 <MenuItem Header="{DynamicResource main_SaveAs}" Command="{Binding Path=clickSaveAsFile}"/>
+                <MenuItem Header="{DynamicResource main_Batch}">
+                    <MenuItem Header="{DynamicResource main_Import}">
+                        <MenuItem Header="{DynamicResource main_Image}" Command="{Binding Path=clickBatchImportImage}"/>
+                        <MenuItem Header="{DynamicResource main_Text}" Command="{Binding Path=clickBatchImportText}"/>
+                    </MenuItem>
+                    <MenuItem Header="{DynamicResource main_Export}">
+                        <MenuItem Header="{DynamicResource main_Image}" Command="{Binding Path=clickBatchExportImage}"/>
+                        <MenuItem Header="{DynamicResource main_Text}" Command="{Binding Path=clickBatchExportText}"/>
+                    </MenuItem>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="{DynamicResource main_Tools}">
                 <MenuItem Header="{DynamicResource main_Visualizer}" Command="{Binding Path=clickVisualizerOpen}"/>

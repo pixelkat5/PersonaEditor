@@ -32,6 +32,10 @@
 
 * Graphics: G1T (.g1t, .file);
 
+### Catherine
+
+* Graphic containers: APK; (NOT THE SAME FORMAT AS METAPHOR'S APK)
+
 ### Digital Devil Saga
 
 * Containers: LB;

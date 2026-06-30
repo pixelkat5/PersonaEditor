@@ -28,6 +28,7 @@
         CMP,
         HIP,
         PAC,
+        APK,
         ATF,
         LB,
         StringList

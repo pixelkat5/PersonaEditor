@@ -174,7 +174,11 @@ namespace PersonaEditor.ViewModels
                 string path = FBD.FileName;
 
                 foreach (var item in PersonaFile.GameData.SubFiles)
-                    File.WriteAllBytes(Path.Combine(path, item.Name), item.GameData.GetData());
+                {
+                    string outPath = Path.Combine(path, item.Name);
+                    Directory.CreateDirectory(Path.GetDirectoryName(outPath));
+                    File.WriteAllBytes(outPath, item.GameData.GetData());
+                }
             }
         }
 
