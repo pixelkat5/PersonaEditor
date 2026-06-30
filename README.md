@@ -1,6 +1,6 @@
 # PersonaEditor
 
-[Last Release](https://github.com/Meloman19/PersonaEditor/releases/latest)
+[Last Release](https://github.com/Ahtheerr/PersonaEditor/releases/latest)
 
 ## Supported File Types per Game
 
