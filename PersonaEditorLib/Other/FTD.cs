@@ -108,7 +108,7 @@ namespace PersonaEditorLib.Other
         {
             streamFile.Stream.Position = streamFile.Position + 4;
             byte[] magicnum = new byte[4];
-            streamFile.Stream.Read(magicnum, 0, 4);
+            streamFile.Stream.ReadExactly(magicnum, 0, 4);
 
             if (BitConverter.ToUInt32(magicnum, 0) == MagicNumber)
                 IsLittleEndian = true;

@@ -31,7 +31,6 @@ namespace PersonaEditorLib.FileContainer
 
         #region Read Only
 
-        readonly int textsize = 0x20;
         readonly int MagicNumber = 0x31444D50;
 
         #endregion

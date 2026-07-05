@@ -9,10 +9,6 @@ namespace AuxiliaryLibraries.Collections
     {
         byte[] bitArray;
         bool[] currentByte = new bool[8];
-
-        int lastBitArrayIndex = 0;
-        int lastBitIndex = 0;
-        int offset = 0;
         
         public BitArrayData(int capacity)
         {

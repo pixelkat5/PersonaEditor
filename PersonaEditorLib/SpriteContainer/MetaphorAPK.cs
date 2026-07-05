@@ -33,10 +33,17 @@ namespace PersonaEditorLib.SpriteContainer
 
         public byte[] GetData()
         {
+            SyncEntries();
             using var ms = new MemoryStream();
             using var writer = new BinaryWriter(ms);
             Write(writer);
             return ms.ToArray();
+        }
+
+        private void SyncEntries()
+        {
+            for (int i = 0; i < SubFiles.Count && i < entries.Count; i++)
+                entries[i].DecompressedData = SubFiles[i].GameData.GetData();
         }
 
         private void Read(BinaryReader reader, byte[] raw)
@@ -157,7 +164,15 @@ namespace PersonaEditorLib.SpriteContainer
         {
             SubFiles.Clear();
             for (int i = 0; i < entries.Count; i++)
-                SubFiles.Add(new GameFile(entries[i].Name, new EntryProxy(this, i)));
+            {
+                var e = entries[i];
+                GameFile sub = GameFormatHelper.OpenFile(e.Name, e.DecompressedData);
+                if (sub == null)
+                    sub = new GameFile(e.Name, new RawEntry(e));
+                else
+                    sub.Tag = e;
+                SubFiles.Add(sub);
+            }
         }
 
         private class Entry
@@ -168,21 +183,19 @@ namespace PersonaEditorLib.SpriteContainer
             public byte[] DecompressedData;
         }
 
-        private class EntryProxy : IGameData
+        private class RawEntry : IGameData
         {
-            private readonly MetaphorAPK owner;
-            private readonly int index;
+            private readonly Entry entry;
 
-            public EntryProxy(MetaphorAPK owner, int index)
+            public RawEntry(Entry entry)
             {
-                this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
-                this.index = index;
+                this.entry = entry ?? throw new ArgumentNullException(nameof(entry));
             }
 
-            public FormatEnum Type => FormatEnum.DDS;
+            public FormatEnum Type => FormatEnum.DAT;
             public List<GameFile> SubFiles { get; } = new List<GameFile>();
-            public int GetSize() => owner.entries[index].DecompressedData?.Length ?? 0;
-            public byte[] GetData() => owner.entries[index].DecompressedData ?? Array.Empty<byte>();
+            public int GetSize() => entry.DecompressedData?.Length ?? 0;
+            public byte[] GetData() => entry.DecompressedData ?? Array.Empty<byte>();
         }
     }
 }

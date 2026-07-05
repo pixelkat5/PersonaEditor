@@ -349,7 +349,6 @@ namespace PersonaEditorLib.Sprite
             public int Height;
             public ICtpkImageFormat Format;
             public ICtpkImageSwizzle Swizzle;
-            public Func<Color, Color> PixelShader;
         }
 
         private interface ICtpkImageFormat
@@ -394,12 +393,7 @@ namespace PersonaEditorLib.Sprite
                     int x = pair.Item1.X;
                     int y = pair.Item1.Y;
                     if (0 <= x && x < width && 0 <= y && y < height)
-                    {
-                        var color = pair.Item2;
-                        if (settings.PixelShader != null)
-                            color = settings.PixelShader(color);
-                        pixels[y * width + x] = color;
-                    }
+                        pixels[y * width + x] = pair.Item2;
                 }
 
                 return new Bitmap(width, height, pixels).ConvertTo(PixelFormats.Bgra32, null);
@@ -415,10 +409,7 @@ namespace PersonaEditorLib.Sprite
                 {
                     int x = Clamp(point.X, 0, source.Width);
                     int y = Clamp(point.Y, 0, source.Height);
-                    var color = pixels[y * source.Width + x];
-                    if (settings.PixelShader != null)
-                        color = settings.PixelShader(color);
-                    colors.Add(color);
+                    colors.Add(pixels[y * source.Width + x]);
                 }
 
                 return settings.Format.Save(colors);
@@ -675,7 +666,7 @@ namespace PersonaEditorLib.Sprite
                     {
                         int a = aDepth == 0 ? 0 : CtpkFormatSupport.ChangeBitDepth(color.A, 8, aDepth);
                         int l = lDepth == 0 ? 0 : CtpkFormatSupport.ChangeBitDepth(color.G, 8, lDepth);
-                        long value = a | ((uint)l << aDepth);
+                        long value = (uint)a | ((uint)l << aDepth);
                         switch (BitDepth)
                         {
                             case 4:
@@ -755,7 +746,7 @@ namespace PersonaEditorLib.Sprite
                     {
                         int r = rDepth == 0 ? 0 : CtpkFormatSupport.ChangeBitDepth(color.R, 8, rDepth);
                         int g = gDepth == 0 ? 0 : CtpkFormatSupport.ChangeBitDepth(color.G, 8, gDepth);
-                        long value = g | ((uint)r << gDepth);
+                        long value = (uint)g | ((uint)r << gDepth);
                         switch (BitDepth)
                         {
                             case 4:

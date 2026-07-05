@@ -2,6 +2,7 @@
 
 namespace PersonaEditorLib.Sprite
 {
+#pragma warning disable CS0649
     struct TMXHeader
     {
         public ushort ID;
@@ -23,4 +24,5 @@ namespace PersonaEditorLib.Sprite
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 28)]
         public byte[] Comment;
     }
+#pragma warning restore CS0649
 }

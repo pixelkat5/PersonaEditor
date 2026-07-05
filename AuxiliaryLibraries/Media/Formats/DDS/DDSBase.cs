@@ -14,6 +14,7 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
         private const uint MagicNumber = 0x20534444;
 
         public DDSHeader Header;
+        public DDSHeaderDXT10? Dxt10Header;
         public List<byte[]> dataList = new List<byte[]>();
 
         public DDSBase(byte[] data)
@@ -34,6 +35,9 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
                 {
                     Header = IOTools.FromBytes<DDSHeader>(reader.ReadBytes(124));
 
+                    if (Header.PixelFormat.FourCC == DDSFourCC.DX10)
+                        Dxt10Header = IOTools.FromBytes<DDSHeaderDXT10>(reader.ReadBytes(20));
+
                     int temp = 0;
 
                     temp += ReadTexture(reader);
@@ -49,6 +53,8 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
             int BitPerBlock = 0;
             if (Header.PixelFormat.PixelFlags == PixelFormatFlags.DDPF_FOURCC)
                 BitPerBlock = Header.PixelFormat.FourCC == DDSFourCC.DXT1 ? 8 : 16;
+            else if (Header.PixelFormat.FourCC == DDSFourCC.DX10)
+                BitPerBlock = 16;
             else if (Header.PixelFormat.PixelFlags == PixelFormatFlags.DDPF_RGBA)
                 BitPerBlock = Header.PixelFormat.RGBBitCount;
             else
@@ -88,7 +94,7 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
             return temp;
         }
 
-        public int Size() => Header.HeaderSize + 4 + dataList.Sum(x => x.Length);
+        public int Size() => Header.HeaderSize + 4 + (Dxt10Header.HasValue ? 20 : 0) + dataList.Sum(x => x.Length);
 
         public byte[] Get()
         {
@@ -99,6 +105,10 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
             {
                 writer.Write(MagicNumber);
                 writer.Write(IOTools.GetBytes(Header));
+
+                if (Dxt10Header.HasValue)
+                    writer.Write(IOTools.GetBytes(Dxt10Header.Value));
+
                 dataList.ForEach(x => writer.Write(x));
                 returned = MS.ToArray();
             }
@@ -108,7 +118,18 @@ namespace AuxiliaryLibraries.Media.Formats.DDS
 
         public Bitmap GetBitmap()
         {
-            if (Header.PixelFormat.PixelFlags == PixelFormatFlags.DDPF_FOURCC)
+            if (Header.PixelFormat.FourCC == DDSFourCC.DX10 && Dxt10Header.HasValue)
+            {
+                DXGIFormat dxgiFormat = (DXGIFormat)Dxt10Header.Value.DxgiFormat;
+                if (dxgiFormat == DXGIFormat.BC7_UNORM || dxgiFormat == DXGIFormat.BC7_UNORM_SRGB || dxgiFormat == DXGIFormat.BC7_TYPELESS)
+                {
+                    byte[] newData = BC7Decoder.Decode(dataList[0], Header.Width, Header.Height);
+                    return new Bitmap(Header.Width, Header.Height, PixelFormats.Bgra32, newData, null);
+                }
+
+                return null;
+            }
+            else if (Header.PixelFormat.PixelFlags == PixelFormatFlags.DDPF_FOURCC)
             {
                 DDSDecompressor.DDSDecompress(Header.Width, Header.Height, dataList[0], Header.PixelFormat.FourCC, out byte[] newData);
                 return new Bitmap(Header.Width, Header.Height, PixelFormats.Bgra32, newData, null);

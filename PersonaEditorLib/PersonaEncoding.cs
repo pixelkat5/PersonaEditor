@@ -72,7 +72,7 @@ namespace PersonaEditorLib
 
                 for (int i = 0; i < count; i++)
                 {
-                    FS.Read(buffer, 0, 2);
+                    FS.ReadExactly(buffer, 0, 2);
                     int Index = (int)(FS.Position - 2) / 2;
                     Add(Index, Unicode.GetChars(buffer)[0]);
                 }

@@ -272,10 +272,9 @@ namespace PersonaEditorLib.Other
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return;
-                // Logging.Write("PersonaEditorLib", e.Message);
             }
 
             glyphsChanged = true;

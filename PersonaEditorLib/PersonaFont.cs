@@ -74,14 +74,13 @@ namespace PersonaEditorLib
             using (FileStream FS = File.OpenRead(FontName))
             {
                 byte[] magic = new byte[4];
-                if (FS.Read(magic, 0, magic.Length) != magic.Length)
-                    throw new InvalidDataException("FNT: invalid file header.");
+                FS.ReadExactly(magic, 0, magic.Length);
                 FS.Position = 0;
 
                 if (magic[0] == (byte)'F' && magic[1] == (byte)'N' && magic[2] == (byte)'T' && magic[3] == (byte)'0')
                 {
                     var data = new byte[FS.Length];
-                    FS.Read(data, 0, data.Length);
+                    FS.ReadExactly(data, 0, data.Length);
                     ReadFNT0(new FNT0(data));
                 }
                 else
@@ -130,7 +129,7 @@ namespace PersonaEditorLib
                 if (CutList.ContainsKey(32))
                     CutList[32] = new VerticalCut(10, 20);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //Logging.Write("PersonaEditorLib", e);
             }
