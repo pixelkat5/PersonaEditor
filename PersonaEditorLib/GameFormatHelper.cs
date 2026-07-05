@@ -149,6 +149,8 @@ namespace PersonaEditorLib
                     Obj = new Sprite.HIP(data);
                 else if (type == FormatEnum.SPD)
                     Obj = new SpriteContainer.SPD(data);
+                else if (type == FormatEnum.MetaphorAPK)
+                    Obj = new SpriteContainer.MetaphorAPK(data);
                 else
                     Obj = new DAT(data);
 
@@ -166,8 +168,19 @@ namespace PersonaEditorLib
             var format = nameFormat == FormatEnum.SPR4 ? nameFormat : GetFormat(data);
             if (format == FormatEnum.Unknown)
                 format = nameFormat;
+            if (format == FormatEnum.APK)
+                format = DetectApkVariant(data);
 
             return OpenFile(name, data, format);
+        }
+
+        private static FormatEnum DetectApkVariant(byte[] data)
+        {
+            if (data.Length < 4)
+                return FormatEnum.APK;
+            if (HasMagic(data, 0, 0x50, 0x41, 0x43, 0x4B))
+                return FormatEnum.MetaphorAPK;
+            return FormatEnum.APK;
         }
 
         public static GameFile OpenFile(string path)
@@ -229,6 +242,8 @@ namespace PersonaEditorLib
                     return FormatEnum.GNF;
                 else if (HasMagic(header, 0, 0x48, 0x49, 0x50, 0x00))
                     return FormatEnum.HIP;
+                else if (HasMagic(header, 0, 0x50, 0x41, 0x43, 0x4B))
+                    return FormatEnum.MetaphorAPK;
             }
             return FormatEnum.Unknown;
         }

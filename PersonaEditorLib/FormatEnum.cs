@@ -29,6 +29,7 @@
         HIP,
         PAC,
         APK,
+        MetaphorAPK,
         ATF,
         LB,
         StringList
