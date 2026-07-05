@@ -20,7 +20,7 @@
 ### Persona 4 Arena (2012)
 * Containers: FPAC (.pac, .paccs, .pacgz, .fontpac);
 * Graphics: HIP;
-* Fonts: ABC, support have quite some problems. (Do not open ABC directly, open the correspondent HIP file and then Right Click + View/Edit)
+* Fonts: ABC — support has quite some problems. (Do not open ABC directly, open the correspondent HIP file and then Right Click + View/Edit)
 * Text: ATF;
 
 ### Persona Q/Q2 (2014/2019)
