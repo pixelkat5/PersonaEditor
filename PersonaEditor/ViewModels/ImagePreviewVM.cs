@@ -1,5 +1,6 @@
 ﻿using AuxiliaryLibraries.WPF;
 using PersonaEditor.Views.Tools;
+using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -39,9 +40,23 @@ namespace PersonaEditor.ViewModels
         public ICommand SelectBack { get; }
         private void SelectBackground()
         {
+            Color originalBackground = Background;
+
             ColorPickerTool colorPickerTool = new ColorPickerTool(Background);
-            if (colorPickerTool.ShowDialog() == true)
-                Background = colorPickerTool.Color;
+            PropertyChangedEventHandler onColorChanged = (s, e) =>
+            {
+                if (e.PropertyName == nameof(ColorPickerTool.Color))
+                    Background = colorPickerTool.Color;
+            };
+            colorPickerTool.PropertyChanged += onColorChanged;
+
+            bool accepted = colorPickerTool.ShowDialog() == true;
+
+            colorPickerTool.PropertyChanged -= onColorChanged;
+
+            // Live-preview already applied every change above; only revert on Cancel/close.
+            if (!accepted)
+                Background = originalBackground;
         }
 
         public ImagePreviewVM()

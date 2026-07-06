@@ -35,6 +35,14 @@ namespace PersonaEditor.Views.Tools
         public ColorPickerTool(Color color = new Color())
         {
             InitializeComponent();
+
+            // If the incoming color is fully transparent (e.g. the "no background
+            // set yet" default), start the picker fully opaque instead. Otherwise
+            // dragging the RGB canvas can never produce a visible color, since
+            // CanvasRGBUC_SelectColorChanged preserves whatever alpha we start with.
+            if (color.A == 0)
+                color.A = 255;
+
             Color = color;
             CanvasRGBUC.SelectColorChanged += CanvasRGBUC_SelectColorChanged;
         }
