@@ -131,7 +131,7 @@ namespace PersonaEditorLib
             }
             catch (Exception)
             {
-                //Logging.Write("PersonaEditorLib", e);
+
             }
         }
 
