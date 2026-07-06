@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  check-version:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.version.outputs.should_release }}
+    steps:
+      - name: Check commit message for version tag
+        id: version
+        shell: bash
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          if [[ "$MSG" =~ ^\[v([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?)\] ]]; then
+            echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [x86, x64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Patch AssemblyInfo.cs
+        shell: bash
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          for FILE in "PersonaEditor/Properties/AssemblyInfo.cs" "PersonaEditorCMD/Properties/AssemblyInfo.cs"; do
+            sed -i "s/AssemblyVersion(\".*\")/AssemblyVersion(\"$VERSION\")/" "$FILE"
+            sed -i "s/AssemblyFileVersion(\".*\")/AssemblyFileVersion(\"$VERSION\")/" "$FILE"
+          done
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore PersonaEditor.sln
+
+      - name: Build
+        run: dotnet build PersonaEditor.sln -c Release -p:Platform=${{ matrix.platform }} --no-restore
+
+      - name: Zip release
+        shell: pwsh
+        run: |
+          $version = "${{ needs.check-version.outputs.version }}"
+          $platform = "${{ matrix.platform }}"
+          $src = "PersonaEditor/bin/$platform/Release/net9.0-windows7.0"
+          $zip = "PersonaEditor-v$version-$platform.zip"
+          Compress-Archive -Path "$src/*" -DestinationPath $zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: PersonaEditor-v*.zip
+
+  release:
+    needs: [check-version, build]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: PersonaEditor v${{ needs.check-version.outputs.version }}
+          body: ${{ github.event.head_commit.message }}
+          files: artifacts/*.zip
