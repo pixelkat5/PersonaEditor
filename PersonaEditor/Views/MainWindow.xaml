@@ -16,7 +16,10 @@
         WindowState="{Binding Source={x:Static settings:WindowSetting.Default}, Path=MWState, Mode=TwoWay}"
         Height="{Binding Source={x:Static settings:WindowSetting.Default}, Path=MWHeight, Mode=TwoWay}"
         Width="{Binding Source={x:Static settings:WindowSetting.Default}, Path=MWWidth, Mode=TwoWay}"
-        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+        AllowDrop="True"
+        DragOver="Window_DragOver"
+        Drop="Window_Drop">
 
     <Window.Resources>
         <v:Int32 x:Key="MyInt">10</v:Int32>

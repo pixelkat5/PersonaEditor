@@ -4,7 +4,6 @@ using PersonaEditor.Classes;
 using System;
 using System.IO;
 using System.Windows;
-using System.Windows.Input;
 
 namespace PersonaEditor.ViewModels
 {
@@ -131,14 +130,6 @@ namespace PersonaEditor.ViewModels
 
         #region Events
 
-        public ICommand Drop { get; }
-        private void DropItem(object arg)
-        {
-            string[] temp = (arg as DragEventArgs).Data.GetData(DataFormats.FileDrop) as string[];
-            if (temp.Length > 0)
-                OpenFile(temp[0]);
-        }
-
         private void Tree_ItemSelected(TreeViewItemVM sender)
         {
             Tab.SetPreview(sender.BitmapSource);
@@ -163,7 +154,6 @@ namespace PersonaEditor.ViewModels
 
         public MultiFileEditVM()
         {
-            Drop = new RelayCommand(DropItem);
             Tree.ItemAction += Tree_ItemAction;
         }
 

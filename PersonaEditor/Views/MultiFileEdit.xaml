@@ -6,14 +6,11 @@
              xmlns:converters="clr-namespace:PersonaEditor.Classes.Converters"
              xmlns:controls="clr-namespace:PersonaEditor.Views"
              xmlns:settings="clr-namespace:PersonaEditor.ApplicationSettings"
-             xmlns:wpf="clr-namespace:AuxiliaryLibraries.WPF.Interactivity;assembly=AuxiliaryLibraries.WPF"
-             xmlns:convert ="clr-namespace:PersonaEditor.ArgumentConverters"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="900">
 
     <UserControl.Resources>
         <converters:NullVisibilityConverter x:Key="NullVisibilityConverter"/>
-        <convert:SecondArgTranslator x:Key="DropConv"/>
     </UserControl.Resources>
 
     <Grid>
@@ -31,24 +28,11 @@
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition/>
-                    <RowDefinition Height="60"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <controls:TreeViewPE Grid.Row="0" DataContext="{Binding Tree}"/>
-                <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1">
-                    <Grid AllowDrop="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Background="Transparent">
-                        <wpf:Interaction.Triggers>
-                            <wpf:EventTrigger EventName="Drop">
-                                <wpf:EventTrigger.Actions>
-                                    <wpf:ActionInvokeCommand Command="{Binding Drop}" CommandArgConverter="{StaticResource DropConv}"/>
-                                </wpf:EventTrigger.Actions>
-                            </wpf:EventTrigger>
-                        </wpf:Interaction.Triggers>
-                        <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" Text="{DynamicResource main_DropFile}" TextAlignment="Center"/>
-                    </Grid>
-                </Border>
-                <StatusBar Grid.Row="2">
+                <StatusBar Grid.Row="1">
                     <StatusBarItem>
                         <TextBlock Text="{Binding StatusBar}"/>
                     </StatusBarItem>
