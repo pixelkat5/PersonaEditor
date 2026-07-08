@@ -71,6 +71,9 @@ namespace PersonaEditor.ViewModels
                 {
                     ItemAction?.Invoke(this, UserTreeViewItemEventEnum.Selected);
                     Edit = true;
+
+                    if (_subItems.Count == 0 && _personaFile.GameData.Type == FormatEnum.DAT)
+                        ItemAction?.Invoke(this, UserTreeViewItemEventEnum.Open);
                 }
             }
         }
